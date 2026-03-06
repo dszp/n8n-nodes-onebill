@@ -79,6 +79,25 @@ export async function getAccessToken(
 }
 
 /**
+ * Check an API response for application-level errors (HTTP 200 with error body).
+ * OneBill returns { status: "Bad Request", validationResponse: { ... } } on validation failures.
+ */
+function checkForApiError(
+	this: IExecuteFunctions | ILoadOptionsFunctions | IHookFunctions | IWebhookFunctions,
+	response: IDataObject,
+): void {
+	if (response.status && response.status !== 'OK' && response.validationResponse) {
+		const validation = response.validationResponse as IDataObject;
+		const errors = validation.validationErrorInfo as IDataObject[] | undefined;
+		const messages = errors?.map((e) => e.message as string).join('; ') || (response.status as string);
+		throw new NodeApiError(this.getNode(), response as unknown as JsonObject, {
+			message: `OneBill API: ${response.status as string}`,
+			description: messages,
+		});
+	}
+}
+
+/**
  * Make an authenticated API request to OneBill.
  */
 export async function oneBillApiRequest(
@@ -112,7 +131,9 @@ export async function oneBillApiRequest(
 	}
 
 	try {
-		return (await this.helpers.httpRequest(options)) as IDataObject;
+		const response = (await this.helpers.httpRequest(options)) as IDataObject;
+		checkForApiError.call(this, response);
+		return response;
 	} catch (error) {
 		// On 401, clear cache and retry once
 		if ((error as JsonObject).httpCode === '401' || (error as JsonObject).statusCode === 401) {
@@ -126,14 +147,22 @@ export async function oneBillApiRequest(
 			};
 
 			try {
-				return (await this.helpers.httpRequest(options)) as IDataObject;
+				const retryResponse = (await this.helpers.httpRequest(options)) as IDataObject;
+				checkForApiError.call(this, retryResponse);
+				return retryResponse;
 			} catch (retryError) {
+				if (retryError instanceof NodeApiError) {
+					throw retryError;
+				}
 				throw new NodeApiError(this.getNode(), retryError as JsonObject, {
 					message: 'Authentication failed after token refresh',
 				});
 			}
 		}
 
+		if (error instanceof NodeApiError) {
+			throw error;
+		}
 		throw new NodeApiError(this.getNode(), error as JsonObject);
 	}
 }
@@ -152,10 +181,12 @@ export async function oneBillApiRequestAllItems(
 	limit?: number,
 ): Promise<IDataObject[]> {
 	const returnData: IDataObject[] = [];
-	const pageSize = 50;
+	const maxPageSize = 50;
 	let startCount = 0;
 	let hasMore = true;
 
+	// If a limit is set and smaller than page size, only request what we need
+	const pageSize = limit && limit < maxPageSize ? limit : maxPageSize;
 	qs.resultCount = pageSize;
 	qs.countRequired = true;
 
@@ -184,7 +215,8 @@ export async function oneBillApiRequestAllItems(
 		}
 
 		// Check if there are more pages
-		const totalCount = response.resultSize || response.totalCount || response.total;
+		// totalCount is the true total; resultSize is just the page size returned
+		const totalCount = response.totalCount || response.total;
 		if (!totalCount || returnData.length >= (totalCount as number)) {
 			hasMore = false;
 			continue;

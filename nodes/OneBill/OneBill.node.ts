@@ -243,7 +243,7 @@ async function handleSubscriber(
 			'/rest/SubscriberService/v1/subscribers',
 			{},
 			qs,
-			undefined,
+			'subscriber',
 			limit,
 		);
 	}
@@ -307,11 +307,12 @@ async function handleSubscriber(
 
 	if (operation === 'getSubscriptions') {
 		const accountNumber = this.getNodeParameter('accountNumber', i) as string;
-		return await oneBillApiRequest.call(
+		const response = await oneBillApiRequest.call(
 			this,
 			'GET',
 			`/rest/SubscriberService/v1/subscribers/${encodeURIComponent(accountNumber)}/subscriptions`,
 		);
+		return (response.subscriptions as IDataObject[]) || [response];
 	}
 
 	throw new NodeOperationError(this.getNode(), `Unknown subscriber operation: ${operation}`);
@@ -363,7 +364,7 @@ async function handleOrder(
 			'/rest/OrderService/v1/orders',
 			{},
 			qs,
-			undefined,
+			'order',
 			limit,
 		);
 	}
@@ -416,7 +417,7 @@ async function handleInvoice(
 			'/rest/InvoiceService/v1/invoices',
 			{},
 			qs,
-			undefined,
+			'invoice',
 			limit,
 		);
 	}
@@ -462,7 +463,7 @@ async function handlePayment(
 			'/rest/PaymentService/v1/payments',
 			{},
 			qs,
-			undefined,
+			'payment',
 			limit,
 		);
 	}
@@ -520,7 +521,7 @@ async function handleProduct(
 			'/rest/ProductService/v1/products',
 			{},
 			qs,
-			undefined,
+			'product',
 			limit,
 		);
 	}
@@ -598,7 +599,7 @@ async function handleTicket(
 			'/rest/TicketManagementService/v1/searchTicketHistory',
 			{},
 			qs,
-			undefined,
+			'historyInfoList',
 			limit,
 		);
 	}
