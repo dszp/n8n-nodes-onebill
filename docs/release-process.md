@@ -39,6 +39,7 @@ CHANGELOG_ANCHOR=$(echo "${VERSION}" | tr '.' '')
 
 gh release create "v${VERSION}" \
   "dszp-n8n-nodes-onebill-${VERSION}.tgz" \
+  --target main \
   --title "v${VERSION}" \
   --notes "$(cat <<EOF
 ## What's Changed
@@ -59,6 +60,7 @@ CHANGELOG_ANCHOR=$(echo "${VERSION}" | tr -d '.')
 
 gh release create "v${VERSION}" \
   "dszp-n8n-nodes-onebill-${VERSION}.tgz" \
+  --target main \
   --title "v${VERSION}" \
   --notes "$(cat <<EOF
 ## What's Changed
@@ -102,6 +104,7 @@ PREV_TAG=$(git describe --tags --abbrev=0)
 CHANGELOG_ANCHOR=$(echo "${VERSION}" | tr -d '.')
 gh release create "v${VERSION}" \
   "dszp-n8n-nodes-onebill-${VERSION}.tgz" \
+  --target main \
   --title "v${VERSION}" \
   --notes "$(cat <<EOF
 ## What's Changed
