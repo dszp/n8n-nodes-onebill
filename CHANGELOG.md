@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.2 (2026-03-06)
+
+No functional changes. Released to test the automated npm publish workflow via GitHub Actions OIDC trusted publishing.
+
 ## 0.0.1 (2026-03-06)
 
 ### Initial Release
