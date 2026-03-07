@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.3 (2026-03-06)
+
+### Bug Fixes
+
+- **Payment → Get for Subscriber**: Fixed response unwrapping so each payment record is returned as a separate n8n item instead of being nested inside a wrapper object
+
 ## 0.0.2 (2026-03-06)
 
 No functional changes. Released to test the automated npm publish workflow via GitHub Actions OIDC trusted publishing.

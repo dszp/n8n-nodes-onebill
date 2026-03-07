@@ -1,6 +1,6 @@
 {
 	"name": "@dszp/n8n-nodes-onebill",
-	"version": "0.0.2",
+	"version": "0.0.3",
 	"description": "n8n community node for the OneBill billing and subscription management API",
 	"license": "MIT",
 	"homepage": "https://github.com/dszp/n8n-nodes-onebill",

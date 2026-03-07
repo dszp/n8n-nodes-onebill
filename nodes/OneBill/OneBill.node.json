@@ -1,6 +1,6 @@
 {
 	"node": "n8n-nodes-base.oneBill",
-	"nodeVersion": "0.0.2",
+	"nodeVersion": "0.0.3",
 	"codexVersion": "1.0",
 	"categories": ["Finance & Accounting"],
 	"resources": {
