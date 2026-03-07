@@ -470,11 +470,15 @@ async function handlePayment(
 
 	if (operation === 'getForSubscriber') {
 		const accountNumber = this.getNodeParameter('accountNumber', i) as string;
-		return await oneBillApiRequest.call(
+		const response = await oneBillApiRequest.call(
 			this,
 			'GET',
 			`/rest/PaymentService/v1/payments/${encodeURIComponent(accountNumber)}`,
 		);
+		// API returns an array with one wrapper object; extract the payment array so each payment is a separate item
+		const responseArray = (Array.isArray(response) ? response : [response]) as IDataObject[];
+		const first = (responseArray[0] || {}) as IDataObject;
+		return (first.payment as IDataObject[]) || [];
 	}
 
 	throw new NodeOperationError(this.getNode(), `Unknown payment operation: ${operation}`);
