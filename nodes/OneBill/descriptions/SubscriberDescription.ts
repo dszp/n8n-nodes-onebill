@@ -13,6 +13,12 @@ export const subscriberOperations: INodeProperties[] = [
 		},
 		options: [
 			{
+				name: 'Add Contact',
+				value: 'addContact',
+				description: 'Add a new contact to a subscriber',
+				action: 'Add a contact to a subscriber',
+			},
+			{
 				name: 'Close',
 				value: 'close',
 				description: 'Close a subscriber account permanently',
@@ -37,6 +43,12 @@ export const subscriberOperations: INodeProperties[] = [
 				action: 'Get a subscriber balance',
 			},
 			{
+				name: 'Get Contacts',
+				value: 'getContacts',
+				description: 'Retrieve all contacts for a subscriber',
+				action: 'Get subscriber contacts',
+			},
+			{
 				name: 'Get Many',
 				value: 'getAll',
 				description: 'Retrieve a list of subscribers',
@@ -47,6 +59,12 @@ export const subscriberOperations: INodeProperties[] = [
 				value: 'getSubscriptions',
 				description: 'Retrieve all subscriptions for a subscriber',
 				action: 'Get subscriber subscriptions',
+			},
+			{
+				name: 'Remove Contact',
+				value: 'removeContact',
+				description: 'Remove a contact from a subscriber',
+				action: 'Remove a contact from a subscriber',
 			},
 			{
 				name: 'Reopen',
@@ -71,6 +89,12 @@ export const subscriberOperations: INodeProperties[] = [
 				value: 'update',
 				description: 'Update a subscriber',
 				action: 'Update a subscriber',
+			},
+			{
+				name: 'Update Contact',
+				value: 'updateContact',
+				description: 'Update a contact on a subscriber',
+				action: 'Update a subscriber contact',
 			},
 		],
 		default: 'getAll',
@@ -271,7 +295,7 @@ export const subscriberFields: INodeProperties[] = [
 		displayOptions: {
 			show: {
 				resource: ['subscriber'],
-				operation: ['get', 'update', 'close', 'suspend', 'resume', 'reopen', 'getBalance', 'getSubscriptions'],
+				operation: ['get', 'update', 'close', 'suspend', 'resume', 'reopen', 'getBalance', 'getSubscriptions', 'getContacts', 'addContact', 'updateContact', 'removeContact'],
 			},
 		},
 		description: 'The account number of the subscriber',
@@ -461,6 +485,205 @@ export const subscriberFields: INodeProperties[] = [
 				type: 'string',
 				default: '',
 				description: 'The postal or ZIP code of the billing address',
+			},
+		],
+	},
+
+	// ----------------------------------
+	//         subscriber: addContact
+	// ----------------------------------
+	{
+		displayName: 'Contact Fields',
+		name: 'contactFields',
+		type: 'collection',
+		placeholder: 'Add Field',
+		default: {},
+		displayOptions: {
+			show: {
+				resource: ['subscriber'],
+				operation: ['addContact'],
+			},
+		},
+		options: [
+			{
+				displayName: 'Billing Contact',
+				name: 'billingContact',
+				type: 'boolean',
+				default: false,
+				description: 'Whether this contact is the billing contact',
+			},
+			{
+				displayName: 'Communication Points (JSON)',
+				name: 'communicationPoint',
+				type: 'json',
+				default: '[]',
+				description: 'Communication points as a JSON array',
+				hint: 'e.g. [{"type": "EMAIL", "value": "nathan@example.com"}, {"type": "PHONE", "value": "+15551234567"}]',
+			},
+			{
+				displayName: 'Contact Type',
+				name: 'contactType',
+				type: 'number',
+				default: 0,
+				description: 'The numeric type identifier for this contact',
+			},
+			{
+				displayName: 'Designation',
+				name: 'designation',
+				type: 'string',
+				default: '',
+				description: 'The designation or title of the contact',
+			},
+			{
+				displayName: 'First Name',
+				name: 'firstName',
+				type: 'string',
+				default: '',
+				description: 'The first name of the contact',
+			},
+			{
+				displayName: 'Last Name',
+				name: 'lastName',
+				type: 'string',
+				default: '',
+				description: 'The last name of the contact',
+			},
+			{
+				displayName: 'Locale',
+				name: 'locale',
+				type: 'string',
+				default: '',
+				description: 'The locale of the contact',
+			},
+			{
+				displayName: 'Middle Name',
+				name: 'middleName',
+				type: 'string',
+				default: '',
+				description: 'The middle name of the contact',
+			},
+			{
+				displayName: 'Primary Contact',
+				name: 'primaryContact',
+				type: 'boolean',
+				default: false,
+				description: 'Whether this contact is the primary contact',
+			},
+			{
+				displayName: 'Salutation',
+				name: 'salutation',
+				type: 'string',
+				default: '',
+				description: 'The salutation for the contact',
+			},
+		],
+	},
+
+	// ----------------------------------
+	//         subscriber: updateContact / removeContact
+	// ----------------------------------
+	{
+		displayName: 'Contact Index',
+		name: 'contactIndex',
+		type: 'number',
+		required: true,
+		default: 0,
+		displayOptions: {
+			show: {
+				resource: ['subscriber'],
+				operation: ['updateContact', 'removeContact'],
+			},
+		},
+		description:
+			"The zero-based index of the contact in the subscriber's contact array. Use 'Get Contacts' first to find the index.",
+	},
+
+	// ----------------------------------
+	//         subscriber: updateContact
+	// ----------------------------------
+	{
+		displayName: 'Update Fields',
+		name: 'updateContactFields',
+		type: 'collection',
+		placeholder: 'Add Field',
+		default: {},
+		displayOptions: {
+			show: {
+				resource: ['subscriber'],
+				operation: ['updateContact'],
+			},
+		},
+		options: [
+			{
+				displayName: 'Billing Contact',
+				name: 'billingContact',
+				type: 'boolean',
+				default: false,
+				description: 'Whether this contact is the billing contact',
+			},
+			{
+				displayName: 'Communication Points (JSON)',
+				name: 'communicationPoint',
+				type: 'json',
+				default: '[]',
+				description: 'Communication points as a JSON array',
+				hint: 'e.g. [{"type": "EMAIL", "value": "nathan@example.com"}, {"type": "PHONE", "value": "+15551234567"}]',
+			},
+			{
+				displayName: 'Contact Type',
+				name: 'contactType',
+				type: 'number',
+				default: 0,
+				description: 'The numeric type identifier for this contact',
+			},
+			{
+				displayName: 'Designation',
+				name: 'designation',
+				type: 'string',
+				default: '',
+				description: 'The designation or title of the contact',
+			},
+			{
+				displayName: 'First Name',
+				name: 'firstName',
+				type: 'string',
+				default: '',
+				description: 'The first name of the contact',
+			},
+			{
+				displayName: 'Last Name',
+				name: 'lastName',
+				type: 'string',
+				default: '',
+				description: 'The last name of the contact',
+			},
+			{
+				displayName: 'Locale',
+				name: 'locale',
+				type: 'string',
+				default: '',
+				description: 'The locale of the contact',
+			},
+			{
+				displayName: 'Middle Name',
+				name: 'middleName',
+				type: 'string',
+				default: '',
+				description: 'The middle name of the contact',
+			},
+			{
+				displayName: 'Primary Contact',
+				name: 'primaryContact',
+				type: 'boolean',
+				default: false,
+				description: 'Whether this contact is the primary contact',
+			},
+			{
+				displayName: 'Salutation',
+				name: 'salutation',
+				type: 'string',
+				default: '',
+				description: 'The salutation for the contact',
 			},
 		],
 	},

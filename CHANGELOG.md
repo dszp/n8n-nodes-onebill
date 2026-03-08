@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.1.0 (2026-03-08)
+
+### New Features
+
+- **Subscriber**: Added 4 contact management operations:
+  - **Add Contact**: Add a new contact to a subscriber (GET-then-PUT pattern)
+  - **Get Contacts**: Retrieve all contacts for a subscriber
+  - **Update Contact**: Update a specific contact by index on a subscriber
+  - **Remove Contact**: Remove a specific contact by index from a subscriber
+- **Lead**: New resource with 5 operations:
+  - Create, Get, Get Many, Update, Convert to Subscriber
+- **Bundle**: New resource with 4 operations:
+  - Create, Get, Get Many, Update
+- **Partner**: New resource with 7 operations:
+  - Create, Delete, Delete Contacts, Get, Resume, Suspend, Update
+- **Vendor**: New resource with 3 operations:
+  - Create, Get, Update
+- Now 10 resources with 58 operations (up from 6 resources with 35 operations)
+
 ## 0.0.3 (2026-03-06)
 
 ### Bug Fixes

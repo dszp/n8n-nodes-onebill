@@ -19,6 +19,10 @@ import { invoiceOperations, invoiceFields } from './descriptions/InvoiceDescript
 import { paymentOperations, paymentFields } from './descriptions/PaymentDescription';
 import { productOperations, productFields } from './descriptions/ProductDescription';
 import { ticketOperations, ticketFields } from './descriptions/TicketDescription';
+import { leadOperations, leadFields } from './descriptions/LeadDescription';
+import { bundleOperations, bundleFields } from './descriptions/BundleDescription';
+import { partnerOperations, partnerFields } from './descriptions/PartnerDescription';
+import { vendorOperations, vendorFields } from './descriptions/VendorDescription';
 
 export class OneBill implements INodeType {
 	description: INodeTypeDescription = {
@@ -50,12 +54,24 @@ export class OneBill implements INodeType {
 				noDataExpression: true,
 				options: [
 					{
+						name: 'Bundle',
+						value: 'bundle',
+					},
+					{
 						name: 'Invoice',
 						value: 'invoice',
 					},
 					{
+						name: 'Lead',
+						value: 'lead',
+					},
+					{
 						name: 'Order',
 						value: 'order',
+					},
+					{
+						name: 'Partner',
+						value: 'partner',
 					},
 					{
 						name: 'Payment',
@@ -73,21 +89,33 @@ export class OneBill implements INodeType {
 						name: 'Ticket',
 						value: 'ticket',
 					},
+					{
+						name: 'Vendor',
+						value: 'vendor',
+					},
 				],
 				default: 'subscriber',
 			},
-			...subscriberOperations,
-			...subscriberFields,
-			...orderOperations,
-			...orderFields,
+			...bundleOperations,
+			...bundleFields,
 			...invoiceOperations,
 			...invoiceFields,
+			...leadOperations,
+			...leadFields,
+			...orderOperations,
+			...orderFields,
+			...partnerOperations,
+			...partnerFields,
 			...paymentOperations,
 			...paymentFields,
 			...productOperations,
 			...productFields,
+			...subscriberOperations,
+			...subscriberFields,
 			...ticketOperations,
 			...ticketFields,
+			...vendorOperations,
+			...vendorFields,
 		],
 	};
 
@@ -181,6 +209,14 @@ export class OneBill implements INodeType {
 					responseData = await handleProduct.call(this, operation, i);
 				} else if (resource === 'ticket') {
 					responseData = await handleTicket.call(this, operation, i);
+				} else if (resource === 'lead') {
+					responseData = await handleLead.call(this, operation, i);
+				} else if (resource === 'bundle') {
+					responseData = await handleBundle.call(this, operation, i);
+				} else if (resource === 'partner') {
+					responseData = await handlePartner.call(this, operation, i);
+				} else if (resource === 'vendor') {
+					responseData = await handleVendor.call(this, operation, i);
 				} else {
 					throw new NodeApiError(this.getNode(), { message: `Unknown resource: ${resource}` } as JsonObject);
 				}
@@ -313,6 +349,121 @@ async function handleSubscriber(
 			`/rest/SubscriberService/v1/subscribers/${encodeURIComponent(accountNumber)}/subscriptions`,
 		);
 		return (response.subscriptions as IDataObject[]) || [response];
+	}
+
+	if (operation === 'getContacts') {
+		const accountNumber = this.getNodeParameter('accountNumber', i) as string;
+		const response = await oneBillApiRequest.call(
+			this,
+			'GET',
+			`/rest/SubscriberService/v1/subscribers/${encodeURIComponent(accountNumber)}`,
+		);
+		const contacts = (response.contact as IDataObject[]) || [];
+		return contacts.map((contact, index) => ({ ...contact, _contactIndex: index }));
+	}
+
+	if (operation === 'addContact') {
+		const accountNumber = this.getNodeParameter('accountNumber', i) as string;
+		const contactFields = this.getNodeParameter('contactFields', i) as IDataObject;
+
+		// Parse communicationPoint if provided as JSON string
+		if (contactFields.communicationPoint && typeof contactFields.communicationPoint === 'string') {
+			contactFields.communicationPoint = JSON.parse(contactFields.communicationPoint as string);
+		}
+
+		// Get existing subscriber to read current contacts
+		const subscriber = await oneBillApiRequest.call(
+			this,
+			'GET',
+			`/rest/SubscriberService/v1/subscribers/${encodeURIComponent(accountNumber)}`,
+		);
+		const contacts = (subscriber.contact as IDataObject[]) || [];
+		contacts.push(contactFields);
+
+		// Update subscriber with new contact array
+		const response = await oneBillApiRequest.call(
+			this,
+			'PUT',
+			`/rest/SubscriberService/v1/subscribers/${encodeURIComponent(accountNumber)}`,
+			{ contact: contacts },
+		);
+		return response;
+	}
+
+	if (operation === 'updateContact') {
+		const accountNumber = this.getNodeParameter('accountNumber', i) as string;
+		const contactIndex = this.getNodeParameter('contactIndex', i) as number;
+		const updateContactFields = this.getNodeParameter('updateContactFields', i) as IDataObject;
+
+		// Parse communicationPoint if provided as JSON string
+		if (
+			updateContactFields.communicationPoint &&
+			typeof updateContactFields.communicationPoint === 'string'
+		) {
+			updateContactFields.communicationPoint = JSON.parse(
+				updateContactFields.communicationPoint as string,
+			);
+		}
+
+		// Get existing subscriber
+		const subscriber = await oneBillApiRequest.call(
+			this,
+			'GET',
+			`/rest/SubscriberService/v1/subscribers/${encodeURIComponent(accountNumber)}`,
+		);
+		const contacts = (subscriber.contact as IDataObject[]) || [];
+
+		if (contactIndex < 0 || contactIndex >= contacts.length) {
+			throw new NodeOperationError(
+				this.getNode(),
+				`Contact index ${contactIndex} is out of bounds. The subscriber has ${contacts.length} contact(s) (indices 0–${contacts.length - 1}).`,
+				{ itemIndex: i },
+			);
+		}
+
+		// Merge update fields into the existing contact
+		Object.assign(contacts[contactIndex], updateContactFields);
+
+		// Update subscriber with modified contact array
+		const response = await oneBillApiRequest.call(
+			this,
+			'PUT',
+			`/rest/SubscriberService/v1/subscribers/${encodeURIComponent(accountNumber)}`,
+			{ contact: contacts },
+		);
+		return response;
+	}
+
+	if (operation === 'removeContact') {
+		const accountNumber = this.getNodeParameter('accountNumber', i) as string;
+		const contactIndex = this.getNodeParameter('contactIndex', i) as number;
+
+		// Get existing subscriber
+		const subscriber = await oneBillApiRequest.call(
+			this,
+			'GET',
+			`/rest/SubscriberService/v1/subscribers/${encodeURIComponent(accountNumber)}`,
+		);
+		const contacts = (subscriber.contact as IDataObject[]) || [];
+
+		if (contactIndex < 0 || contactIndex >= contacts.length) {
+			throw new NodeOperationError(
+				this.getNode(),
+				`Contact index ${contactIndex} is out of bounds. The subscriber has ${contacts.length} contact(s) (indices 0–${contacts.length - 1}).`,
+				{ itemIndex: i },
+			);
+		}
+
+		contacts.splice(contactIndex, 1);
+
+		// Update subscriber with modified contact array
+		await oneBillApiRequest.call(
+			this,
+			'PUT',
+			`/rest/SubscriberService/v1/subscribers/${encodeURIComponent(accountNumber)}`,
+			{ contact: contacts },
+		);
+		return { deleted: true };
 	}
 
 	throw new NodeOperationError(this.getNode(), `Unknown subscriber operation: ${operation}`);
@@ -609,4 +760,274 @@ async function handleTicket(
 	}
 
 	throw new NodeOperationError(this.getNode(), `Unknown ticket operation: ${operation}`);
+}
+
+async function handleLead(
+	this: IExecuteFunctions,
+	operation: string,
+	i: number,
+): Promise<IDataObject | IDataObject[]> {
+	if (operation === 'create') {
+		const body: IDataObject = {
+			accountName: this.getNodeParameter('accountName', i) as string,
+		};
+		const additionalFields = this.getNodeParameter('additionalFields', i) as IDataObject;
+		if (additionalFields.contact && typeof additionalFields.contact === 'string') {
+			additionalFields.contact = JSON.parse(additionalFields.contact as string);
+		}
+		if (additionalFields.customFields && typeof additionalFields.customFields === 'string') {
+			additionalFields.customFields = JSON.parse(additionalFields.customFields as string);
+		}
+		Object.assign(body, additionalFields);
+		return await oneBillApiRequest.call(this, 'POST', '/rest/SubscriberService/v1/lead', body);
+	}
+
+	if (operation === 'get') {
+		const accountNumber = this.getNodeParameter('accountNumber', i) as string;
+		return await oneBillApiRequest.call(
+			this,
+			'GET',
+			`/rest/SubscriberService/v1/leads/${encodeURIComponent(accountNumber)}`,
+		);
+	}
+
+	if (operation === 'getAll') {
+		const returnAll = this.getNodeParameter('returnAll', i) as boolean;
+		const filters = this.getNodeParameter('filters', i) as IDataObject;
+		const qs: IDataObject = { ...filters };
+		const limit = returnAll ? undefined : (this.getNodeParameter('limit', i) as number);
+		return await oneBillApiRequestAllItems.call(
+			this,
+			'GET',
+			'/rest/SubscriberService/v1/leads',
+			{},
+			qs,
+			'lead',
+			limit,
+		);
+	}
+
+	if (operation === 'update') {
+		const accountNumber = this.getNodeParameter('accountNumber', i) as string;
+		const updateFields = this.getNodeParameter('updateFields', i) as IDataObject;
+		if (updateFields.contact && typeof updateFields.contact === 'string') {
+			updateFields.contact = JSON.parse(updateFields.contact as string);
+		}
+		if (updateFields.customFields && typeof updateFields.customFields === 'string') {
+			updateFields.customFields = JSON.parse(updateFields.customFields as string);
+		}
+		return await oneBillApiRequest.call(
+			this,
+			'PUT',
+			`/rest/SubscriberService/v1/leads/${encodeURIComponent(accountNumber)}`,
+			updateFields,
+		);
+	}
+
+	if (operation === 'convertToSubscriber') {
+		const accountNumber = this.getNodeParameter('accountNumber', i) as string;
+		return await oneBillApiRequest.call(
+			this,
+			'POST',
+			`/rest/SubscriberService/v1/subscribers/${encodeURIComponent(accountNumber)}/leadToSubscriber`,
+		);
+	}
+
+	throw new NodeOperationError(this.getNode(), `Unknown lead operation: ${operation}`);
+}
+
+async function handleBundle(
+	this: IExecuteFunctions,
+	operation: string,
+	i: number,
+): Promise<IDataObject | IDataObject[]> {
+	if (operation === 'create') {
+		const body: IDataObject = {
+			bundleCode: this.getNodeParameter('bundleCode', i) as string,
+			name: this.getNodeParameter('name', i) as string,
+		};
+		const additionalFields = this.getNodeParameter('additionalFields', i) as IDataObject;
+		if (additionalFields.bundleProduct && typeof additionalFields.bundleProduct === 'string') {
+			additionalFields.bundleProduct = JSON.parse(additionalFields.bundleProduct as string);
+		}
+		Object.assign(body, additionalFields);
+		return await oneBillApiRequest.call(
+			this,
+			'POST',
+			'/rest/ProductService/v1/products/bundle',
+			body,
+		);
+	}
+
+	if (operation === 'get') {
+		const bundleCode = this.getNodeParameter('bundleCode', i) as string;
+		return await oneBillApiRequest.call(
+			this,
+			'GET',
+			`/rest/ProductService/v1/bundles/${encodeURIComponent(bundleCode)}`,
+		);
+	}
+
+	if (operation === 'getAll') {
+		const returnAll = this.getNodeParameter('returnAll', i) as boolean;
+		const filters = this.getNodeParameter('filters', i) as IDataObject;
+		const qs: IDataObject = { ...filters };
+		const limit = returnAll ? undefined : (this.getNodeParameter('limit', i) as number);
+		return await oneBillApiRequestAllItems.call(
+			this,
+			'GET',
+			'/rest/ProductService/v1/bundles',
+			{},
+			qs,
+			'bundle',
+			limit,
+		);
+	}
+
+	if (operation === 'update') {
+		const body = JSON.parse(this.getNodeParameter('updateBody', i) as string) as IDataObject;
+		return await oneBillApiRequest.call(
+			this,
+			'PUT',
+			'/rest/ProductService/v1/products/bundle',
+			body,
+		);
+	}
+
+	throw new NodeOperationError(this.getNode(), `Unknown bundle operation: ${operation}`);
+}
+
+async function handlePartner(
+	this: IExecuteFunctions,
+	operation: string,
+	i: number,
+): Promise<IDataObject | IDataObject[]> {
+	if (operation === 'create') {
+		const body: IDataObject = {
+			accountName: this.getNodeParameter('accountName', i) as string,
+		};
+		const additionalFields = this.getNodeParameter('additionalFields', i) as IDataObject;
+		if (additionalFields.contacts && typeof additionalFields.contacts === 'string') {
+			additionalFields.contacts = JSON.parse(additionalFields.contacts as string);
+		}
+		if (additionalFields.customFields && typeof additionalFields.customFields === 'string') {
+			additionalFields.customFields = JSON.parse(additionalFields.customFields as string);
+		}
+		Object.assign(body, additionalFields);
+		return await oneBillApiRequest.call(
+			this,
+			'POST',
+			'/rest/PartnerService/v1/partners',
+			body,
+		);
+	}
+
+	if (operation === 'get') {
+		const accountNumber = this.getNodeParameter('accountNumber', i) as string;
+		return await oneBillApiRequest.call(
+			this,
+			'GET',
+			`/rest/PartnerService/v1/partners/${encodeURIComponent(accountNumber)}`,
+		);
+	}
+
+	if (operation === 'delete') {
+		const accountNumber = this.getNodeParameter('accountNumber', i) as string;
+		await oneBillApiRequest.call(
+			this,
+			'DELETE',
+			`/rest/PartnerService/v1/partners/${encodeURIComponent(accountNumber)}`,
+		);
+		return { deleted: true };
+	}
+
+	if (operation === 'deleteContacts') {
+		const accountNumber = this.getNodeParameter('accountNumber', i) as string;
+		const contactIds = JSON.parse(
+			this.getNodeParameter('contactIds', i) as string,
+		) as string[];
+		return await oneBillApiRequest.call(
+			this,
+			'PUT',
+			`/rest/PartnerService/v1/channel/deleteContacts/${encodeURIComponent(accountNumber)}`,
+			{ contactIds },
+		);
+	}
+
+	if (operation === 'suspend') {
+		const accountNumber = this.getNodeParameter('accountNumber', i) as string;
+		return await oneBillApiRequest.call(
+			this,
+			'PUT',
+			`/rest/PartnerService/v1/partners/${encodeURIComponent(accountNumber)}/suspend`,
+		);
+	}
+
+	if (operation === 'resume') {
+		const accountNumber = this.getNodeParameter('accountNumber', i) as string;
+		return await oneBillApiRequest.call(
+			this,
+			'PUT',
+			`/rest/PartnerService/v1/partners/${encodeURIComponent(accountNumber)}/resume`,
+		);
+	}
+
+	if (operation === 'update') {
+		const body = JSON.parse(this.getNodeParameter('updateBody', i) as string) as IDataObject;
+		return await oneBillApiRequest.call(
+			this,
+			'PUT',
+			'/rest/PartnerService/v1/partners',
+			body,
+		);
+	}
+
+	throw new NodeOperationError(this.getNode(), `Unknown partner operation: ${operation}`);
+}
+
+async function handleVendor(
+	this: IExecuteFunctions,
+	operation: string,
+	i: number,
+): Promise<IDataObject | IDataObject[]> {
+	if (operation === 'create') {
+		const body: IDataObject = {
+			accountName: this.getNodeParameter('accountName', i) as string,
+		};
+		const additionalFields = this.getNodeParameter('additionalFields', i) as IDataObject;
+		if (additionalFields.contacts && typeof additionalFields.contacts === 'string') {
+			additionalFields.contacts = JSON.parse(additionalFields.contacts as string);
+		}
+		if (additionalFields.customFields && typeof additionalFields.customFields === 'string') {
+			additionalFields.customFields = JSON.parse(additionalFields.customFields as string);
+		}
+		Object.assign(body, additionalFields);
+		return await oneBillApiRequest.call(
+			this,
+			'POST',
+			'/rest/PartnerService/v1/vendor',
+			body,
+		);
+	}
+
+	if (operation === 'get') {
+		const accountNumber = this.getNodeParameter('accountNumber', i) as string;
+		return await oneBillApiRequest.call(
+			this,
+			'GET',
+			`/rest/PartnerService/v1/vendor/${encodeURIComponent(accountNumber)}`,
+		);
+	}
+
+	if (operation === 'update') {
+		const body = JSON.parse(this.getNodeParameter('updateBody', i) as string) as IDataObject;
+		return await oneBillApiRequest.call(
+			this,
+			'PUT',
+			'/rest/PartnerService/v1/vendor',
+			body,
+		);
+	}
+
+	throw new NodeOperationError(this.getNode(), `Unknown vendor operation: ${operation}`);
 }
