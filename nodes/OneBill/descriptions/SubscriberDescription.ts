@@ -520,6 +520,14 @@ export const subscriberFields: INodeProperties[] = [
 		},
 		options: [
 			{
+				displayName: 'Alternate Phone',
+				name: 'alternatePhone',
+				type: 'string',
+				default: '',
+				placeholder: 'e.g. 5551234567',
+				description: 'The alternate phone number of the contact',
+			},
+			{
 				displayName: 'Billing Contact',
 				name: 'billingContact',
 				type: 'boolean',
@@ -527,12 +535,20 @@ export const subscriberFields: INodeProperties[] = [
 				description: 'Whether this contact is the billing contact',
 			},
 			{
-				displayName: 'Communication Points (JSON)',
-				name: 'communicationPoint',
-				type: 'json',
-				default: '[]',
-				description: 'Communication points as a JSON array',
-				hint: 'e.g. [{"type": "EMAIL", "value": "nathan@example.com"}, {"type": "PHONE", "value": "+15551234567"}]',
+				displayName: 'Cell Phone',
+				name: 'cellPhone',
+				type: 'string',
+				default: '',
+				placeholder: 'e.g. 5559876543',
+				description: 'The cell phone number of the contact',
+			},
+			{
+				displayName: 'Contact Phone',
+				name: 'contactPhone',
+				type: 'string',
+				default: '',
+				placeholder: 'e.g. 5551234567',
+				description: 'The primary phone number of the contact',
 			},
 			{
 				displayName: 'Contact Type',
@@ -547,6 +563,14 @@ export const subscriberFields: INodeProperties[] = [
 				type: 'string',
 				default: '',
 				description: 'The designation or title of the contact',
+			},
+			{
+				displayName: 'Email Address',
+				name: 'emailAddress',
+				type: 'string',
+				default: '',
+				placeholder: 'e.g. nathan@example.com',
+				description: 'The email address of the contact',
 			},
 			{
 				displayName: 'First Name',
@@ -629,6 +653,14 @@ export const subscriberFields: INodeProperties[] = [
 		},
 		options: [
 			{
+				displayName: 'Alternate Phone',
+				name: 'alternatePhone',
+				type: 'string',
+				default: '',
+				placeholder: 'e.g. 5551234567',
+				description: 'The alternate phone number of the contact',
+			},
+			{
 				displayName: 'Billing Contact',
 				name: 'billingContact',
 				type: 'boolean',
@@ -636,12 +668,20 @@ export const subscriberFields: INodeProperties[] = [
 				description: 'Whether this contact is the billing contact',
 			},
 			{
-				displayName: 'Communication Points (JSON)',
-				name: 'communicationPoint',
-				type: 'json',
-				default: '[]',
-				description: 'Communication points as a JSON array',
-				hint: 'e.g. [{"type": "EMAIL", "value": "nathan@example.com"}, {"type": "PHONE", "value": "+15551234567"}]',
+				displayName: 'Cell Phone',
+				name: 'cellPhone',
+				type: 'string',
+				default: '',
+				placeholder: 'e.g. 5559876543',
+				description: 'The cell phone number of the contact',
+			},
+			{
+				displayName: 'Contact Phone',
+				name: 'contactPhone',
+				type: 'string',
+				default: '',
+				placeholder: 'e.g. 5551234567',
+				description: 'The primary phone number of the contact',
 			},
 			{
 				displayName: 'Contact Type',
@@ -656,6 +696,14 @@ export const subscriberFields: INodeProperties[] = [
 				type: 'string',
 				default: '',
 				description: 'The designation or title of the contact',
+			},
+			{
+				displayName: 'Email Address',
+				name: 'emailAddress',
+				type: 'string',
+				default: '',
+				placeholder: 'e.g. nathan@example.com',
+				description: 'The email address of the contact',
 			},
 			{
 				displayName: 'First Name',

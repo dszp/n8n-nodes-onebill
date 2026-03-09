@@ -255,6 +255,29 @@ function stripPasswordsFromContacts(contacts: IDataObject[]): void {
 	}
 }
 
+/**
+ * Build a communicationPoint array from individual contact fields
+ * (emailAddress, contactPhone, cellPhone, alternatePhone) and remove
+ * those fields from the source object so they are not sent as-is.
+ */
+function buildCommunicationPoints(fields: IDataObject): IDataObject[] {
+	const fieldMap: Array<{ field: string; type: string }> = [
+		{ field: 'emailAddress', type: 'EMAIL' },
+		{ field: 'contactPhone', type: 'PHONE' },
+		{ field: 'cellPhone', type: 'CPHONE' },
+		{ field: 'alternatePhone', type: 'APHONE' },
+	];
+	const points: IDataObject[] = [];
+	for (const { field, type } of fieldMap) {
+		if (fields[field] !== undefined) {
+			const value = fields[field] as string;
+			points.push(value ? { type, value } : { type });
+			delete fields[field];
+		}
+	}
+	return points;
+}
+
 async function handleSubscriber(
 	this: IExecuteFunctions,
 	operation: string,
@@ -391,10 +414,8 @@ async function handleSubscriber(
 		const accountNumber = this.getNodeParameter('accountNumber', i) as string;
 		const contactFields = this.getNodeParameter('contactFields', i) as IDataObject;
 
-		// Parse communicationPoint if provided as JSON string
-		if (contactFields.communicationPoint && typeof contactFields.communicationPoint === 'string') {
-			contactFields.communicationPoint = JSON.parse(contactFields.communicationPoint as string);
-		}
+		// Build communicationPoint array from individual fields
+		contactFields.communicationPoint = buildCommunicationPoints(contactFields);
 
 		// Get existing subscriber to read current contacts
 		const subscriber = await oneBillApiRequest.call(
@@ -420,14 +441,10 @@ async function handleSubscriber(
 		const contactIndex = this.getNodeParameter('contactIndex', i) as number;
 		const updateContactFields = this.getNodeParameter('updateContactFields', i) as IDataObject;
 
-		// Parse communicationPoint if provided as JSON string
-		if (
-			updateContactFields.communicationPoint &&
-			typeof updateContactFields.communicationPoint === 'string'
-		) {
-			updateContactFields.communicationPoint = JSON.parse(
-				updateContactFields.communicationPoint as string,
-			);
+		// Build communicationPoint array from individual fields
+		const commPoints = buildCommunicationPoints(updateContactFields);
+		if (commPoints.length > 0) {
+			updateContactFields.communicationPoint = commPoints;
 		}
 
 		// Get existing subscriber
