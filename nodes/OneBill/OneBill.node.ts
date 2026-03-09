@@ -278,6 +278,25 @@ function buildCommunicationPoints(fields: IDataObject): IDataObject[] {
 	return points;
 }
 
+/**
+ * Extract userDetail fields (username, userRoleName, is2faEnabled) from flat
+ * contact fields into a nested userDetail object.  Removes the extracted keys
+ * from the source object.  Returns undefined when no userDetail fields are set.
+ */
+function buildUserDetail(fields: IDataObject): IDataObject | undefined {
+	const userDetailKeys = ['username', 'userRoleName', 'is2faEnabled'] as const;
+	const detail: IDataObject = {};
+	let hasAny = false;
+	for (const key of userDetailKeys) {
+		if (fields[key] !== undefined) {
+			detail[key] = fields[key];
+			delete fields[key];
+			hasAny = true;
+		}
+	}
+	return hasAny ? detail : undefined;
+}
+
 async function handleSubscriber(
 	this: IExecuteFunctions,
 	operation: string,
@@ -420,6 +439,12 @@ async function handleSubscriber(
 		// Build communicationPoint array from individual fields
 		contactFields.communicationPoint = buildCommunicationPoints(contactFields);
 
+		// Build nested userDetail from flat fields
+		const userDetail = buildUserDetail(contactFields);
+		if (userDetail) {
+			contactFields.userDetail = userDetail;
+		}
+
 		// Get existing subscriber to read current contacts
 		const subscriber = await oneBillApiRequest.call(
 			this,
@@ -448,6 +473,12 @@ async function handleSubscriber(
 		const commPoints = buildCommunicationPoints(updateContactFields);
 		if (commPoints.length > 0) {
 			updateContactFields.communicationPoint = commPoints;
+		}
+
+		// Build nested userDetail from flat fields, merging with existing
+		const userDetail = buildUserDetail(updateContactFields);
+		if (userDetail) {
+			updateContactFields.userDetail = userDetail;
 		}
 
 		// Get existing subscriber
