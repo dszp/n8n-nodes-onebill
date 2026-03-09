@@ -414,6 +414,9 @@ async function handleSubscriber(
 		const accountNumber = this.getNodeParameter('accountNumber', i) as string;
 		const contactFields = this.getNodeParameter('contactFields', i) as IDataObject;
 
+		// Email is a required standalone field for addContact
+		contactFields.emailAddress = this.getNodeParameter('emailAddress', i) as string;
+
 		// Build communicationPoint array from individual fields
 		contactFields.communicationPoint = buildCommunicationPoints(contactFields);
 

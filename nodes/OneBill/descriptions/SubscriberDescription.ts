@@ -507,6 +507,21 @@ export const subscriberFields: INodeProperties[] = [
 	//         subscriber: addContact
 	// ----------------------------------
 	{
+		displayName: 'Email Address',
+		name: 'emailAddress',
+		type: 'string',
+		required: true,
+		default: '',
+		placeholder: 'e.g. nathan@example.com',
+		displayOptions: {
+			show: {
+				resource: ['subscriber'],
+				operation: ['addContact'],
+			},
+		},
+		description: 'The email address of the contact',
+	},
+	{
 		displayName: 'Contact Fields',
 		name: 'contactFields',
 		type: 'collection',
@@ -553,9 +568,14 @@ export const subscriberFields: INodeProperties[] = [
 			{
 				displayName: 'Contact Type',
 				name: 'contactType',
-				type: 'number',
+				type: 'options',
+				options: [
+					{ name: 'Primary', value: 0 },
+					{ name: 'Other', value: 1 },
+					{ name: 'System', value: 2 },
+				],
 				default: 0,
-				description: 'The numeric type identifier for this contact',
+				description: 'The type of contact. Use an expression to set other numeric values.',
 			},
 			{
 				displayName: 'Designation',
@@ -563,14 +583,6 @@ export const subscriberFields: INodeProperties[] = [
 				type: 'string',
 				default: '',
 				description: 'The designation or title of the contact',
-			},
-			{
-				displayName: 'Email Address',
-				name: 'emailAddress',
-				type: 'string',
-				default: '',
-				placeholder: 'e.g. nathan@example.com',
-				description: 'The email address of the contact',
 			},
 			{
 				displayName: 'First Name',
@@ -686,9 +698,14 @@ export const subscriberFields: INodeProperties[] = [
 			{
 				displayName: 'Contact Type',
 				name: 'contactType',
-				type: 'number',
+				type: 'options',
+				options: [
+					{ name: 'Primary', value: 0 },
+					{ name: 'Other', value: 1 },
+					{ name: 'System', value: 2 },
+				],
 				default: 0,
-				description: 'The numeric type identifier for this contact',
+				description: 'The type of contact. Use an expression to set other numeric values.',
 			},
 			{
 				displayName: 'Designation',
