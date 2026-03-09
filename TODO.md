@@ -1,10 +1,10 @@
 # TODO - OneBill n8n Node API Coverage
 
-## Currently Implemented (v0.0.1)
+## Currently Implemented (v0.1.0)
 
-31 operations across 6 resources covering the core billing workflow.
+58 operations across 10 resources covering core billing, partner, and product workflows.
 
-### Subscriber (10 operations)
+### Subscriber (14 operations)
 - [x] Create — `POST /rest/SubscriberService/v1/subscriber`
 - [x] Get — `GET /rest/SubscriberService/v1/subscribers/{accountNumber}`
 - [x] Get Many — `GET /rest/SubscriberService/v1/subscribers`
@@ -15,6 +15,17 @@
 - [x] Reopen — `POST /rest/SubscriberService/v1/subscribers/reopen/{accountNumber}`
 - [x] Get Balance — `GET /rest/SubscriberService/v1/subscribers/{accountNumber}/balance`
 - [x] Get Subscriptions — `GET /rest/SubscriberService/v1/subscribers/{accountNumber}/subscriptions`
+- [x] Add Contact — GET-then-PUT on `/rest/SubscriberService/v1/subscribers/{accountNumber}`
+- [x] Get Contacts — `GET /rest/SubscriberService/v1/subscribers/{accountNumber}` (extracts contact array)
+- [x] Update Contact — GET-then-PUT on `/rest/SubscriberService/v1/subscribers/{accountNumber}`
+- [x] Remove Contact — GET-then-PUT on `/rest/SubscriberService/v1/subscribers/{accountNumber}`
+
+### Lead (5 operations)
+- [x] Create — `POST /rest/SubscriberService/v1/lead`
+- [x] Get — `GET /rest/SubscriberService/v1/leads/{accountNumber}`
+- [x] Get Many — `GET /rest/SubscriberService/v1/leads`
+- [x] Update — `PUT /rest/SubscriberService/v1/leads/{accountNumber}`
+- [x] Convert to Subscriber — `POST /rest/SubscriberService/v1/subscribers/{accountNumber}/leadToSubscriber`
 
 ### Order (6 operations)
 - [x] Create — `POST /rest/OrderService/v1/order`
@@ -31,7 +42,7 @@
 
 ### Payment (3 operations)
 - [x] Create — `POST /rest/PaymentService/v1/payment`
-- [x] Get Many — `GET /rest/PaymentService/v1/payments`
+- [x] Get Many — `GET /rest/PaymentService/v1/payments` (no API pagination; date range filters only, defaults to last month start; clearing Range From returns all payments)
 - [x] Get for Subscriber — `GET /rest/PaymentService/v1/payments/{accountNumber}`
 
 ### Product (5 operations)
@@ -40,6 +51,26 @@
 - [x] Get Many — `GET /rest/ProductService/v1/products`
 - [x] Update — `PUT /rest/ProductService/v1/product`
 - [x] Delete — `DELETE /rest/ProductService/v1/products/{productCode}`
+
+### Bundle (4 operations)
+- [x] Create — `POST /rest/ProductService/v1/products/bundle`
+- [x] Get — `GET /rest/ProductService/v1/bundles/{bundleCode}`
+- [x] Get Many — `GET /rest/ProductService/v1/bundles`
+- [x] Update — `PUT /rest/ProductService/v1/products/bundle`
+
+### Partner (7 operations)
+- [x] Create — `POST /rest/PartnerService/v1/partners`
+- [x] Get — `GET /rest/PartnerService/v1/partners/{accountNumber}`
+- [x] Update — `PUT /rest/PartnerService/v1/partners`
+- [x] Delete — `DELETE /rest/PartnerService/v1/partners/{accountNumber}`
+- [x] Suspend — `PUT /rest/PartnerService/v1/partners/{accountNumber}/suspend`
+- [x] Resume — `PUT /rest/PartnerService/v1/partners/{accountNumber}/resume`
+- [x] Delete Contacts — `PUT /rest/PartnerService/v1/channel/deleteContacts/{accountNumber}`
+
+### Vendor (3 operations)
+- [x] Create — `POST /rest/PartnerService/v1/vendor`
+- [x] Get — `GET /rest/PartnerService/v1/vendor/{accountNumber}`
+- [x] Update — `PUT /rest/PartnerService/v1/vendor`
 
 ### Ticket (4 operations)
 - [x] Create — `POST /rest/TicketManagementService/v1/ticket`
@@ -54,11 +85,6 @@
 ### Existing Resource Gaps
 
 #### SubscriberService — Additional Operations
-- [ ] Create Lead — `POST /rest/SubscriberService/v1/lead`
-- [ ] Get Lead — `GET /rest/SubscriberService/v1/leads/{accountNumber}`
-- [ ] Get Many Leads — `GET /rest/SubscriberService/v1/leads`
-- [ ] Update Lead — `PUT /rest/SubscriberService/v1/leads/{accountNumber}`
-- [ ] Convert Lead to Subscriber — `POST /rest/SubscriberService/v1/subscribers/{accountNumber}/leadToSubscriber`
 - [ ] Generate Bill — `POST /rest/SubscriberService/v1/subscribers/{accountNumber}/bill`
 - [ ] Delete Bill Transactions — `DELETE /rest/SubscriberService/v1/subscribers/{accountNumber}/bills/{billNumber}/transactions`
 - [ ] Swap Provisioning Attributes — `PUT /rest/SubscriberService/v1/subscribers/subscriptions/swapProvisioningAttributes`
@@ -71,15 +97,16 @@
 - [ ] Delete Payment Profile — `DELETE /rest/PaymentService/v1/payment/{accountNumber}/payinfo/{paymentProfileId}`
 
 #### ProductService — Additional Operations
-- [ ] Create Bundle — `POST /rest/ProductService/v1/products/bundle`
-- [ ] Get Bundle — `GET /rest/ProductService/v1/bundles/{bundleCode}`
-- [ ] Get Many Bundles — `GET /rest/ProductService/v1/bundles`
-- [ ] Update Bundle — `PUT /rest/ProductService/v1/products/bundle`
+- [ ] Delete Bundle — `DELETE /rest/ProductService/v1/bundles/{bundleCode}` (if supported)
 - [ ] Delete Price Plan — `DELETE /rest/ProductService/v1/products/priceplan/{pricePlanId}`
 - [ ] Create Resell Template — `POST /rest/ProductService/v1/products/resellTemplate`
 - [ ] Get Resell Template — `GET /rest/ProductService/v1/products/resellTemplate/{templateName}`
 - [ ] Update Resell Template — `PUT /rest/ProductService/v1/products/resellTemplate`
 - [ ] Resell Product — `POST /rest/ProductService/v1/resell`
+
+#### PartnerService — Additional Operations
+- [ ] Get Many Partners — `GET /rest/PartnerService/v1/partners` (if list endpoint exists)
+- [ ] Get Many Vendors — `GET /rest/PartnerService/v1/vendors` (if list endpoint exists)
 
 #### TicketManagementService — Additional Operations
 - [ ] Bulk Update Tickets — `PUT /rest/TicketManagementService/v1/tickets`
@@ -105,18 +132,6 @@
 ---
 
 ### New Resources (Not Yet Implemented)
-
-#### PartnerService (new resource)
-- [ ] Create Partner — `POST /rest/PartnerService/v1/partners`
-- [ ] Get Partner — `GET /rest/PartnerService/v1/partners/{accountNumber}`
-- [ ] Update Partner — `PUT /rest/PartnerService/v1/partners`
-- [ ] Delete Partner — `DELETE /rest/PartnerService/v1/partners/{accountNumber}`
-- [ ] Suspend Partner — `PUT /rest/PartnerService/v1/partners/{accountNumber}/suspend`
-- [ ] Resume Partner — `PUT /rest/PartnerService/v1/partners/{accountNumber}/resume`
-- [ ] Delete Partner Contacts — `PUT /rest/PartnerService/v1/channel/deleteContacts/{accountNumber}`
-- [ ] Create Vendor — `POST /rest/PartnerService/v1/vendor`
-- [ ] Get Vendor — `GET /rest/PartnerService/v1/vendor/{accountNumber}`
-- [ ] Update Vendor — `PUT /rest/PartnerService/v1/vendor`
 
 #### PromotionService (new resource)
 - [ ] Create Counter — `POST /rest/PromotionService/v1/promotions/counter`
@@ -175,21 +190,21 @@ Note: The OpenAPI spec lists many context-specific endpoints (e.g. `POST /rest/R
 ## Implementation Priority Suggestions
 
 ### High Priority (commonly needed in billing workflows)
-1. Lead management (SubscriberService) — lead-to-subscriber conversion is a core sales workflow
-2. Generate Bill (SubscriberService) — on-demand billing
-3. PartnerService — channel partner management
-4. UserService — user/role management
+1. Generate Bill (SubscriberService) — on-demand billing
+2. UserService — user/role management
+3. Delete Payment Profile (PaymentService)
 
 ### Medium Priority (useful for advanced billing)
-5. Product Bundles (ProductService)
-6. PromotionService — discounts, coupons, trials
-7. Delete Payment Profile (PaymentService)
-8. Re-Rate Orders (OrderService)
+4. PromotionService — discounts, coupons, trials
+5. Re-Rate Orders (OrderService)
+6. Product resell templates and bundles
 
 ### Lower Priority (admin/configuration)
-9. RuleService — business rule management
-10. TicketManagementService admin operations (departments, templates, classifications)
-11. BillingService / UtilityService / CommonService
+7. RuleService — business rule management
+8. TicketManagementService admin operations (departments, templates, classifications)
+9. BillingService / UtilityService / CommonService
 
 ### Additional Notes
-The Subscriber nodes have an "address" array with multiple addresses. Separate direct review/editing of these is probably beneficial to add to the API as well, like Contacts.
+- The Subscriber resource has an "address" array with multiple addresses. Separate direct review/editing of these would be beneficial, similar to the Contact operations added in v0.1.0.
+- Partner and Vendor resources may benefit from Get Many operations if OneBill supports list endpoints for them (not documented in OpenAPI spec).
+- The OneBill API does not provide a way to filter subscribers by associated agent (`agentAccId`). Getting agent associations requires individual Get calls per subscriber.
