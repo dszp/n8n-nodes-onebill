@@ -186,34 +186,33 @@ export const paymentFields: INodeProperties[] = [
 		description: 'Max number of results to return',
 	},
 	{
-		displayName: 'Filters',
-		name: 'filters',
-		type: 'collection',
-		placeholder: 'Add Filter',
-		default: {},
+		displayName: 'Range From',
+		name: 'rangeFrom',
+		type: 'string',
+		default: '={{ DateTime.now().minus({ months: 1 }).startOf("month").toFormat("yyyy-MM-dd") }}',
+		placeholder: 'e.g. 2025-01-01',
 		displayOptions: {
 			show: {
 				resource: ['payment'],
 				operation: ['getAll'],
 			},
 		},
-		options: [
-			{
-				displayName: 'Range From',
-				name: 'rangeFrom',
-				type: 'string',
-				default: '',
-				placeholder: 'e.g. 2025-01-01',
-				description: 'Start date for the search range in ISO format',
+		description:
+			'Start date for the search range (YYYY-MM-DD). Defaults to the first day of last month. Clear to retrieve all payments.',
+	},
+	{
+		displayName: 'Range To',
+		name: 'rangeTo',
+		type: 'string',
+		default: '',
+		placeholder: 'e.g. 2025-12-31',
+		displayOptions: {
+			show: {
+				resource: ['payment'],
+				operation: ['getAll'],
 			},
-			{
-				displayName: 'Range To',
-				name: 'rangeTo',
-				type: 'string',
-				default: '',
-				placeholder: 'e.g. 2025-12-31',
-				description: 'End date for the search range in ISO format',
-			},
-		],
+		},
+		description:
+			'End date for the search range (YYYY-MM-DD). Leave empty to include all payments from the start date to now.',
 	},
 ];

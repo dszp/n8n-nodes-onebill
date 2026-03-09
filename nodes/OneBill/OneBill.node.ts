@@ -605,8 +605,15 @@ async function handlePayment(
 
 	if (operation === 'getAll') {
 		const returnAll = this.getNodeParameter('returnAll', i) as boolean;
-		const filters = this.getNodeParameter('filters', i) as IDataObject;
-		const qs: IDataObject = { ...filters };
+		const qs: IDataObject = {};
+		const rangeFrom = this.getNodeParameter('rangeFrom', i) as string;
+		const rangeTo = this.getNodeParameter('rangeTo', i) as string;
+		if (rangeFrom) {
+			qs.rangeFrom = rangeFrom;
+		}
+		if (rangeTo) {
+			qs.rangeTo = rangeTo;
+		}
 		// Payment endpoint does not support startCount/resultCount pagination;
 		// it returns all results matching the date range in a single response
 		const response = await oneBillApiRequest.call(
