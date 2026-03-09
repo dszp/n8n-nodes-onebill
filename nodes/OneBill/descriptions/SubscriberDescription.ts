@@ -526,7 +526,15 @@ export const subscriberFields: INodeProperties[] = [
 		name: 'contactFields',
 		type: 'collection',
 		placeholder: 'Add Field',
-		default: {},
+		default: {
+			firstName: '',
+			lastName: '',
+			primaryContact: false,
+			billingContact: false,
+			contactPhone: '',
+			locale: 'en_US',
+			userRoleName: 'ROLE_SUBSCRIBER',
+		},
 		displayOptions: {
 			show: {
 				resource: ['subscriber'],
@@ -578,13 +586,6 @@ export const subscriberFields: INodeProperties[] = [
 				description: 'The type of contact. Use an expression to set other numeric values.',
 			},
 			{
-				displayName: 'Designation',
-				name: 'designation',
-				type: 'string',
-				default: '',
-				description: 'The designation or title of the contact',
-			},
-			{
 				displayName: 'Enable Two-Step Verification',
 				name: 'is2faEnabled',
 				type: 'boolean',
@@ -634,6 +635,13 @@ export const subscriberFields: INodeProperties[] = [
 				description: 'The salutation for the contact',
 			},
 			{
+				displayName: 'Title (Designation)',
+				name: 'designation',
+				type: 'string',
+				default: '',
+				description: 'The title or designation of the contact',
+			},
+			{
 				displayName: 'User Role Name',
 				name: 'userRoleName',
 				type: 'string',
@@ -678,7 +686,15 @@ export const subscriberFields: INodeProperties[] = [
 		name: 'updateContactFields',
 		type: 'collection',
 		placeholder: 'Add Field',
-		default: {},
+		default: {
+			firstName: '',
+			lastName: '',
+			primaryContact: false,
+			billingContact: false,
+			contactPhone: '',
+			locale: 'en_US',
+			userRoleName: 'ROLE_SUBSCRIBER',
+		},
 		displayOptions: {
 			show: {
 				resource: ['subscriber'],
@@ -728,13 +744,6 @@ export const subscriberFields: INodeProperties[] = [
 				],
 				default: 0,
 				description: 'The type of contact. Use an expression to set other numeric values.',
-			},
-			{
-				displayName: 'Designation',
-				name: 'designation',
-				type: 'string',
-				default: '',
-				description: 'The designation or title of the contact',
 			},
 			{
 				displayName: 'Email Address',
@@ -792,6 +801,13 @@ export const subscriberFields: INodeProperties[] = [
 				type: 'string',
 				default: '',
 				description: 'The salutation for the contact',
+			},
+			{
+				displayName: 'Title (Designation)',
+				name: 'designation',
+				type: 'string',
+				default: '',
+				description: 'The title or designation of the contact',
 			},
 			{
 				displayName: 'User Role Name',
