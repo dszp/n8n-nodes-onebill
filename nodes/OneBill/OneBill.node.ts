@@ -407,7 +407,7 @@ async function handleSubscriber(
 		if (!includeHashes) {
 			stripPasswordsFromContacts(contacts);
 		}
-		return contacts.map((contact, index) => ({ ...contact, _contactIndex: index }));
+		return contacts.map((contact, index) => ({ _contactIndex: index, ...contact }));
 	}
 
 	if (operation === 'addContact') {
