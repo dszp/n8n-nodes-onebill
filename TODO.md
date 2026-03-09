@@ -206,5 +206,5 @@ Note: The OpenAPI spec lists many context-specific endpoints (e.g. `POST /rest/R
 
 ### Additional Notes
 - The Subscriber resource has an "address" array with multiple addresses. Separate direct review/editing of these would be beneficial, similar to the Contact operations added in v0.1.0.
-- Partner and Vendor resources may benefit from Get Many operations if OneBill supports list endpoints for them (not documented in OpenAPI spec).
+- Partner and Vendor resources would benefit from Get Many operations but OneBill doesn't support these endpoints so it's not possible yet.
 - The OneBill API does not provide a way to filter subscribers by associated agent (`agentAccId`). Getting agent associations requires individual Get calls per subscriber.
