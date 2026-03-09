@@ -602,8 +602,8 @@ export const subscriberFields: INodeProperties[] = [
 				displayName: 'Locale',
 				name: 'locale',
 				type: 'string',
-				default: '',
-				description: 'The locale of the contact',
+				default: 'en_US',
+				description: 'The locale of the contact. Defaults to en_US.',
 			},
 			{
 				displayName: 'Middle Name',
@@ -740,8 +740,8 @@ export const subscriberFields: INodeProperties[] = [
 				displayName: 'Locale',
 				name: 'locale',
 				type: 'string',
-				default: '',
-				description: 'The locale of the contact',
+				default: 'en_US',
+				description: 'The locale of the contact. Defaults to en_US.',
 			},
 			{
 				displayName: 'Middle Name',
