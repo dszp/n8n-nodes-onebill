@@ -13,6 +13,12 @@ export const subscriberOperations: INodeProperties[] = [
 		},
 		options: [
 			{
+				name: 'Add Contact',
+				value: 'addContact',
+				description: 'Add a new contact to a subscriber',
+				action: 'Add a contact to a subscriber',
+			},
+			{
 				name: 'Close',
 				value: 'close',
 				description: 'Close a subscriber account permanently',
@@ -37,6 +43,12 @@ export const subscriberOperations: INodeProperties[] = [
 				action: 'Get a subscriber balance',
 			},
 			{
+				name: 'Get Contacts',
+				value: 'getContacts',
+				description: 'Retrieve all contacts for a subscriber',
+				action: 'Get subscriber contacts',
+			},
+			{
 				name: 'Get Many',
 				value: 'getAll',
 				description: 'Retrieve a list of subscribers',
@@ -47,6 +59,12 @@ export const subscriberOperations: INodeProperties[] = [
 				value: 'getSubscriptions',
 				description: 'Retrieve all subscriptions for a subscriber',
 				action: 'Get subscriber subscriptions',
+			},
+			{
+				name: 'Remove Contact',
+				value: 'removeContact',
+				description: 'Remove a contact from a subscriber',
+				action: 'Remove a contact from a subscriber',
 			},
 			{
 				name: 'Reopen',
@@ -71,6 +89,12 @@ export const subscriberOperations: INodeProperties[] = [
 				value: 'update',
 				description: 'Update a subscriber',
 				action: 'Update a subscriber',
+			},
+			{
+				name: 'Update Contact',
+				value: 'updateContact',
+				description: 'Update a contact on a subscriber',
+				action: 'Update a subscriber contact',
 			},
 		],
 		default: 'getAll',
@@ -271,10 +295,24 @@ export const subscriberFields: INodeProperties[] = [
 		displayOptions: {
 			show: {
 				resource: ['subscriber'],
-				operation: ['get', 'update', 'close', 'suspend', 'resume', 'reopen', 'getBalance', 'getSubscriptions'],
+				operation: ['get', 'update', 'close', 'suspend', 'resume', 'reopen', 'getBalance', 'getSubscriptions', 'getContacts', 'addContact', 'updateContact', 'removeContact'],
 			},
 		},
 		description: 'The account number of the subscriber',
+	},
+	{
+		displayName: 'Include Password Hashes',
+		name: 'includePasswordHashes',
+		type: 'boolean',
+		default: false,
+		displayOptions: {
+			show: {
+				resource: ['subscriber'],
+				operation: ['get', 'getContacts'],
+			},
+		},
+		description:
+			'Whether to include password hashes in contact user details. Disabled by default for security.',
 	},
 
 	// ----------------------------------
@@ -461,6 +499,330 @@ export const subscriberFields: INodeProperties[] = [
 				type: 'string',
 				default: '',
 				description: 'The postal or ZIP code of the billing address',
+			},
+		],
+	},
+
+	// ----------------------------------
+	//         subscriber: addContact
+	// ----------------------------------
+	{
+		displayName: 'Email Address',
+		name: 'emailAddress',
+		type: 'string',
+		required: true,
+		default: '',
+		placeholder: 'e.g. nathan@example.com',
+		displayOptions: {
+			show: {
+				resource: ['subscriber'],
+				operation: ['addContact'],
+			},
+		},
+		description: 'The email address of the contact',
+	},
+	{
+		displayName: 'Contact Fields',
+		name: 'contactFields',
+		type: 'collection',
+		placeholder: 'Add Field',
+		default: {
+			firstName: '',
+			lastName: '',
+			primaryContact: false,
+			billingContact: false,
+			contactPhone: '',
+			locale: 'en_US',
+			userRoleName: 'ROLE_SUBSCRIBER',
+		},
+		displayOptions: {
+			show: {
+				resource: ['subscriber'],
+				operation: ['addContact'],
+			},
+		},
+		options: [
+			{
+				displayName: 'Alternate Phone',
+				name: 'alternatePhone',
+				type: 'string',
+				default: '',
+				placeholder: 'e.g. 5551234567',
+				description: 'The alternate phone number of the contact',
+			},
+			{
+				displayName: 'Billing Contact',
+				name: 'billingContact',
+				type: 'boolean',
+				default: false,
+				description: 'Whether this contact is the billing contact',
+			},
+			{
+				displayName: 'Cell Phone',
+				name: 'cellPhone',
+				type: 'string',
+				default: '',
+				placeholder: 'e.g. 5559876543',
+				description: 'The cell phone number of the contact',
+			},
+			{
+				displayName: 'Contact Phone',
+				name: 'contactPhone',
+				type: 'string',
+				default: '',
+				placeholder: 'e.g. 5551234567',
+				description: 'The primary phone number of the contact',
+			},
+			{
+				displayName: 'Contact Type',
+				name: 'contactType',
+				type: 'options',
+				options: [
+					{ name: 'Primary', value: 0 },
+					{ name: 'Other', value: 1 },
+					{ name: 'System', value: 2 },
+				],
+				default: 0,
+				description: 'The type of contact. Use an expression to set other numeric values.',
+			},
+			{
+				displayName: 'Enable Two-Step Verification',
+				name: 'is2faEnabled',
+				type: 'boolean',
+				default: false,
+				description: 'Whether two-step verification is enabled for this contact',
+			},
+			{
+				displayName: 'First Name',
+				name: 'firstName',
+				type: 'string',
+				default: '',
+				description: 'The first name of the contact',
+			},
+			{
+				displayName: 'Last Name',
+				name: 'lastName',
+				type: 'string',
+				default: '',
+				description: 'The last name of the contact',
+			},
+			{
+				displayName: 'Locale',
+				name: 'locale',
+				type: 'string',
+				default: 'en_US',
+				description: 'The locale of the contact. Defaults to en_US.',
+			},
+			{
+				displayName: 'Middle Name',
+				name: 'middleName',
+				type: 'string',
+				default: '',
+				description: 'The middle name of the contact',
+			},
+			{
+				displayName: 'Primary Contact',
+				name: 'primaryContact',
+				type: 'boolean',
+				default: false,
+				description: 'Whether this contact is the primary contact',
+			},
+			{
+				displayName: 'Salutation',
+				name: 'salutation',
+				type: 'string',
+				default: '',
+				description: 'The salutation for the contact',
+			},
+			{
+				displayName: 'Title (Designation)',
+				name: 'designation',
+				type: 'string',
+				default: '',
+				description: 'The title or designation of the contact',
+			},
+			{
+				displayName: 'User Role Name',
+				name: 'userRoleName',
+				type: 'string',
+				default: 'ROLE_SUBSCRIBER',
+				description: 'The role assigned to this contact. Defaults to ROLE_SUBSCRIBER.',
+			},
+			{
+				displayName: 'Username',
+				name: 'username',
+				type: 'string',
+				default: '',
+				placeholder: 'e.g. nathan@example.com',
+				description: 'The login username for this contact (typically an email address)',
+			},
+		],
+	},
+
+	// ----------------------------------
+	//         subscriber: updateContact / removeContact
+	// ----------------------------------
+	{
+		displayName: 'Contact Index',
+		name: 'contactIndex',
+		type: 'number',
+		required: true,
+		default: 0,
+		displayOptions: {
+			show: {
+				resource: ['subscriber'],
+				operation: ['updateContact', 'removeContact'],
+			},
+		},
+		description:
+			"The zero-based index of the contact in the subscriber's contact array. Use 'Get Contacts' first to find the index.",
+	},
+
+	// ----------------------------------
+	//         subscriber: updateContact
+	// ----------------------------------
+	{
+		displayName: 'Update Fields',
+		name: 'updateContactFields',
+		type: 'collection',
+		placeholder: 'Add Field',
+		default: {
+			firstName: '',
+			lastName: '',
+			primaryContact: false,
+			billingContact: false,
+			contactPhone: '',
+			locale: 'en_US',
+			userRoleName: 'ROLE_SUBSCRIBER',
+		},
+		displayOptions: {
+			show: {
+				resource: ['subscriber'],
+				operation: ['updateContact'],
+			},
+		},
+		options: [
+			{
+				displayName: 'Alternate Phone',
+				name: 'alternatePhone',
+				type: 'string',
+				default: '',
+				placeholder: 'e.g. 5551234567',
+				description: 'The alternate phone number of the contact',
+			},
+			{
+				displayName: 'Billing Contact',
+				name: 'billingContact',
+				type: 'boolean',
+				default: false,
+				description: 'Whether this contact is the billing contact',
+			},
+			{
+				displayName: 'Cell Phone',
+				name: 'cellPhone',
+				type: 'string',
+				default: '',
+				placeholder: 'e.g. 5559876543',
+				description: 'The cell phone number of the contact',
+			},
+			{
+				displayName: 'Contact Phone',
+				name: 'contactPhone',
+				type: 'string',
+				default: '',
+				placeholder: 'e.g. 5551234567',
+				description: 'The primary phone number of the contact',
+			},
+			{
+				displayName: 'Contact Type',
+				name: 'contactType',
+				type: 'options',
+				options: [
+					{ name: 'Primary', value: 0 },
+					{ name: 'Other', value: 1 },
+					{ name: 'System', value: 2 },
+				],
+				default: 0,
+				description: 'The type of contact. Use an expression to set other numeric values.',
+			},
+			{
+				displayName: 'Email Address',
+				name: 'emailAddress',
+				type: 'string',
+				default: '',
+				placeholder: 'e.g. nathan@example.com',
+				description: 'The email address of the contact',
+			},
+			{
+				displayName: 'Enable Two-Step Verification',
+				name: 'is2faEnabled',
+				type: 'boolean',
+				default: false,
+				description: 'Whether two-step verification is enabled for this contact',
+			},
+			{
+				displayName: 'First Name',
+				name: 'firstName',
+				type: 'string',
+				default: '',
+				description: 'The first name of the contact',
+			},
+			{
+				displayName: 'Last Name',
+				name: 'lastName',
+				type: 'string',
+				default: '',
+				description: 'The last name of the contact',
+			},
+			{
+				displayName: 'Locale',
+				name: 'locale',
+				type: 'string',
+				default: 'en_US',
+				description: 'The locale of the contact. Defaults to en_US.',
+			},
+			{
+				displayName: 'Middle Name',
+				name: 'middleName',
+				type: 'string',
+				default: '',
+				description: 'The middle name of the contact',
+			},
+			{
+				displayName: 'Primary Contact',
+				name: 'primaryContact',
+				type: 'boolean',
+				default: false,
+				description: 'Whether this contact is the primary contact',
+			},
+			{
+				displayName: 'Salutation',
+				name: 'salutation',
+				type: 'string',
+				default: '',
+				description: 'The salutation for the contact',
+			},
+			{
+				displayName: 'Title (Designation)',
+				name: 'designation',
+				type: 'string',
+				default: '',
+				description: 'The title or designation of the contact',
+			},
+			{
+				displayName: 'User Role Name',
+				name: 'userRoleName',
+				type: 'string',
+				default: 'ROLE_SUBSCRIBER',
+				description: 'The role assigned to this contact. Defaults to ROLE_SUBSCRIBER.',
+			},
+			{
+				displayName: 'Username',
+				name: 'username',
+				type: 'string',
+				default: '',
+				placeholder: 'e.g. nathan@example.com',
+				description: 'The login username for this contact (typically an email address)',
 			},
 		],
 	},
