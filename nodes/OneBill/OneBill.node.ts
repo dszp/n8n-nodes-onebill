@@ -70,7 +70,7 @@ export class OneBill implements INodeType {
 						value: 'order',
 					},
 					{
-						name: 'Partner',
+						name: 'Partner/Agent',
 						value: 'partner',
 					},
 					{
@@ -242,6 +242,19 @@ export class OneBill implements INodeType {
 	}
 }
 
+/**
+ * Strip password hashes from contact userDetail/userDetails objects in-place.
+ */
+function stripPasswordsFromContacts(contacts: IDataObject[]): void {
+	for (const contact of contacts) {
+		for (const key of ['userDetail', 'userDetails'] as const) {
+			if (contact[key] && typeof contact[key] === 'object') {
+				delete (contact[key] as IDataObject).password;
+			}
+		}
+	}
+}
+
 async function handleSubscriber(
 	this: IExecuteFunctions,
 	operation: string,
@@ -261,11 +274,16 @@ async function handleSubscriber(
 
 	if (operation === 'get') {
 		const accountNumber = this.getNodeParameter('accountNumber', i) as string;
-		return await oneBillApiRequest.call(
+		const response = await oneBillApiRequest.call(
 			this,
 			'GET',
 			`/rest/SubscriberService/v1/subscribers/${encodeURIComponent(accountNumber)}`,
 		);
+		delete response.status;
+		if (response.contact) {
+			stripPasswordsFromContacts(response.contact as IDataObject[]);
+		}
+		return response;
 	}
 
 	if (operation === 'getAll') {
@@ -334,11 +352,13 @@ async function handleSubscriber(
 
 	if (operation === 'getBalance') {
 		const accountNumber = this.getNodeParameter('accountNumber', i) as string;
-		return await oneBillApiRequest.call(
+		const response = await oneBillApiRequest.call(
 			this,
 			'GET',
 			`/rest/SubscriberService/v1/subscribers/${encodeURIComponent(accountNumber)}/balance`,
 		);
+		delete response.status;
+		return response;
 	}
 
 	if (operation === 'getSubscriptions') {
@@ -359,6 +379,7 @@ async function handleSubscriber(
 			`/rest/SubscriberService/v1/subscribers/${encodeURIComponent(accountNumber)}`,
 		);
 		const contacts = (response.contact as IDataObject[]) || [];
+		stripPasswordsFromContacts(contacts);
 		return contacts.map((contact, index) => ({ ...contact, _contactIndex: index }));
 	}
 
@@ -936,11 +957,45 @@ async function handlePartner(
 
 	if (operation === 'get') {
 		const accountNumber = this.getNodeParameter('accountNumber', i) as string;
-		return await oneBillApiRequest.call(
+		const response = await oneBillApiRequest.call(
 			this,
 			'GET',
 			`/rest/PartnerService/v1/partners/${encodeURIComponent(accountNumber)}`,
 		);
+		delete response.status;
+
+		// Flatten primary address to top-level fields
+		const addresses = response.address as IDataObject[] | undefined;
+		if (addresses && addresses.length > 0) {
+			const primary =
+				addresses.find((a) => a.defaultBilling) || addresses[0];
+			response._addressLine1 = primary.addLine1 || '';
+			response._addressLine2 = primary.addLine2 || '';
+			response._city = primary.city || '';
+			response._state = primary.state || '';
+			response._country = primary.country || '';
+			response._zip = primary.zip || '';
+		}
+
+		// Flatten primary contact to top-level fields and strip passwords
+		const contacts = response.contact as IDataObject[] | undefined;
+		if (contacts && contacts.length > 0) {
+			stripPasswordsFromContacts(contacts);
+			const primary =
+				contacts.find((c) => c.primaryContact) || contacts[0];
+			response._contactFirstName = primary.firstName || '';
+			response._contactLastName = primary.lastName || '';
+			const comPoints = primary.communicationPoint as IDataObject[] | undefined;
+			if (comPoints) {
+				for (const cp of comPoints) {
+					if (cp.type === 'EMAIL' && cp.value) response._contactEmail = cp.value;
+					if (cp.type === 'PHONE' && cp.value) response._contactPhone = cp.value;
+					if (cp.type === 'CPHONE' && cp.value) response._contactCellPhone = cp.value;
+					if (cp.type === 'APHONE' && cp.value) response._contactAltPhone = cp.value;
+				}
+			}
+		}
+		return response;
 	}
 
 	if (operation === 'delete') {
