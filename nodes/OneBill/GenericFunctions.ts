@@ -198,6 +198,10 @@ export async function oneBillApiRequestAllItems(
 		let items: IDataObject[];
 		if (dataKey && response[dataKey]) {
 			items = response[dataKey] as IDataObject[];
+		} else if (dataKey && !response[dataKey]) {
+			// dataKey was expected but not present (e.g. empty result set)
+			hasMore = false;
+			continue;
 		} else if (Array.isArray(response)) {
 			items = response as IDataObject[];
 		} else {
