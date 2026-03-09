@@ -190,3 +190,6 @@ Note: The OpenAPI spec lists many context-specific endpoints (e.g. `POST /rest/R
 9. RuleService — business rule management
 10. TicketManagementService admin operations (departments, templates, classifications)
 11. BillingService / UtilityService / CommonService
+
+### Additional Notes
+The Subscriber nodes have an "address" array with multiple addresses. Separate direct review/editing of these is probably beneficial to add to the API as well, like Contacts.
