@@ -300,6 +300,20 @@ export const subscriberFields: INodeProperties[] = [
 		},
 		description: 'The account number of the subscriber',
 	},
+	{
+		displayName: 'Include Password Hashes',
+		name: 'includePasswordHashes',
+		type: 'boolean',
+		default: false,
+		displayOptions: {
+			show: {
+				resource: ['subscriber'],
+				operation: ['get', 'getContacts'],
+			},
+		},
+		description:
+			'Whether to include password hashes in contact user details. Disabled by default for security.',
+	},
 
 	// ----------------------------------
 	//         subscriber: getAll

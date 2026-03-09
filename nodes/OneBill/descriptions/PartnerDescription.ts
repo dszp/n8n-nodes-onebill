@@ -210,6 +210,20 @@ export const partnerFields: INodeProperties[] = [
 		},
 		description: 'The account number of the partner or agent',
 	},
+	{
+		displayName: 'Include Password Hashes',
+		name: 'includePasswordHashes',
+		type: 'boolean',
+		default: false,
+		displayOptions: {
+			show: {
+				resource: ['partner'],
+				operation: ['get'],
+			},
+		},
+		description:
+			'Whether to include password hashes in contact user details. Disabled by default for security.',
+	},
 
 	// ----------------------------------
 	//         partner: deleteContacts

@@ -280,7 +280,8 @@ async function handleSubscriber(
 			`/rest/SubscriberService/v1/subscribers/${encodeURIComponent(accountNumber)}`,
 		);
 		delete response.status;
-		if (response.contact) {
+		const includeHashes = this.getNodeParameter('includePasswordHashes', i, false) as boolean;
+		if (!includeHashes && response.contact) {
 			stripPasswordsFromContacts(response.contact as IDataObject[]);
 		}
 		return response;
@@ -379,7 +380,10 @@ async function handleSubscriber(
 			`/rest/SubscriberService/v1/subscribers/${encodeURIComponent(accountNumber)}`,
 		);
 		const contacts = (response.contact as IDataObject[]) || [];
-		stripPasswordsFromContacts(contacts);
+		const includeHashes = this.getNodeParameter('includePasswordHashes', i, false) as boolean;
+		if (!includeHashes) {
+			stripPasswordsFromContacts(contacts);
+		}
 		return contacts.map((contact, index) => ({ ...contact, _contactIndex: index }));
 	}
 
@@ -977,10 +981,13 @@ async function handlePartner(
 			response._zip = primary.zip || '';
 		}
 
-		// Flatten primary contact to top-level fields and strip passwords
+		// Flatten primary contact to top-level fields and optionally strip passwords
+		const includeHashes = this.getNodeParameter('includePasswordHashes', i, false) as boolean;
 		const contacts = response.contact as IDataObject[] | undefined;
 		if (contacts && contacts.length > 0) {
-			stripPasswordsFromContacts(contacts);
+			if (!includeHashes) {
+				stripPasswordsFromContacts(contacts);
+			}
 			const primary =
 				contacts.find((c) => c.primaryContact) || contacts[0];
 			response._contactFirstName = primary.firstName || '';
