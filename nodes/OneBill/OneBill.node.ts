@@ -629,7 +629,6 @@ async function handlePayment(
 	}
 
 	if (operation === 'getAll') {
-		const returnAll = this.getNodeParameter('returnAll', i) as boolean;
 		const qs: IDataObject = {};
 		const rangeFrom = this.getNodeParameter('rangeFrom', i) as string;
 		const rangeTo = this.getNodeParameter('rangeTo', i) as string;
@@ -639,7 +638,7 @@ async function handlePayment(
 		if (rangeTo) {
 			qs.rangeTo = rangeTo;
 		}
-		// Payment endpoint does not support startCount/resultCount pagination;
+		// Payment endpoint does not support pagination;
 		// it returns all results matching the date range in a single response
 		const response = await oneBillApiRequest.call(
 			this,
@@ -648,12 +647,7 @@ async function handlePayment(
 			{},
 			qs,
 		);
-		const payments = (response.payment as IDataObject[]) || [];
-		if (!returnAll) {
-			const limit = this.getNodeParameter('limit', i) as number;
-			return payments.slice(0, limit);
-		}
-		return payments;
+		return (response.payment as IDataObject[]) || [];
 	}
 
 	if (operation === 'getForSubscriber') {
