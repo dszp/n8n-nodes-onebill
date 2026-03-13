@@ -4,10 +4,11 @@
 	"description": "n8n community node for the OneBill billing and subscription management API",
 	"license": "MIT",
 	"homepage": "https://github.com/dszp/n8n-nodes-onebill",
-	"author": {
-		"name": "David Szpunar",
-		"email": "dszp@users.noreply.github.com"
-	},
+    "author": {
+        "name": "David Szpunar",
+        "email": "davidszp@gmail.com",
+        "url": "https://david.szpunar.com"
+    },
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/dszp/n8n-nodes-onebill.git"
