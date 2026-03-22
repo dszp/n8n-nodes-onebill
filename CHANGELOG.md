@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Security
+
+- **HTTPS enforcement**: Base URL is now validated to require HTTPS before any API requests, preventing accidental credential transmission over unencrypted HTTP
+- **JSON input validation**: All JSON.parse() calls now provide user-friendly error messages naming the specific field with invalid JSON, instead of raw SyntaxError messages
+- **GitHub Actions**: Upgraded actions/checkout and actions/setup-node from v5 to v6, pinned to full commit SHAs for supply chain hardening
+
 ## 0.1.0 (2026-03-08)
 
 ### New Features

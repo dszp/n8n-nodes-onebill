@@ -9,7 +9,25 @@ import type {
 	IHttpRequestOptions,
 	JsonObject,
 } from 'n8n-workflow';
-import { NodeApiError } from 'n8n-workflow';
+import { NodeApiError, NodeOperationError } from 'n8n-workflow';
+
+/**
+ * Validate and normalize the base URL from credentials.
+ * Strips trailing slash and enforces HTTPS to prevent credential leakage over HTTP.
+ */
+function validateBaseUrl(
+	context: IExecuteFunctions | ILoadOptionsFunctions | IHookFunctions | IWebhookFunctions,
+	rawBaseUrl: string,
+): string {
+	const baseUrl = rawBaseUrl.replace(/\/$/, '');
+	if (!baseUrl.startsWith('https://')) {
+		throw new NodeOperationError(context.getNode(),
+			'Base URL must use HTTPS to protect credentials during transmission',
+			{ description: `The configured base URL '${baseUrl}' does not use HTTPS. Update the OneBill credentials to use an HTTPS URL.` },
+		);
+	}
+	return baseUrl;
+}
 
 // Module-level token cache
 const tokenCache = new Map<string, { token: string; expiresAt: number }>();
@@ -44,7 +62,7 @@ export async function getAccessToken(
 		return cached.token;
 	}
 
-	const baseUrl = (credentials.baseUrl as string).replace(/\/$/, '');
+	const baseUrl = validateBaseUrl(this, credentials.baseUrl as string);
 	const clientSecret = credentials.clientSecret as string;
 	const password = credentials.password as string;
 	const scope = (credentials.scope as string) || 'trust';
@@ -108,7 +126,7 @@ export async function oneBillApiRequest(
 	qs: IDataObject = {},
 ): Promise<IDataObject> {
 	const credentials = await this.getCredentials('oneBillApi');
-	const baseUrl = (credentials.baseUrl as string).replace(/\/$/, '');
+	const baseUrl = validateBaseUrl(this, credentials.baseUrl as string);
 	const tenantId = credentials.tenantId as string;
 
 	let token = await getAccessToken.call(this, credentials);

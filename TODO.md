@@ -204,6 +204,9 @@ Note: The OpenAPI spec lists many context-specific endpoints (e.g. `POST /rest/R
 8. TicketManagementService admin operations (departments, templates, classifications)
 9. BillingService / UtilityService / CommonService
 
+### Security Improvements
+- [ ] Test whether OneBill's `/oauth/token` endpoint accepts credentials in the POST body (`application/x-www-form-urlencoded`) instead of query parameters. Currently credentials are sent as query string params in `GenericFunctions.ts`, which can appear in proxy/server logs. If the API accepts body params, switch from `qs` to `body` with `URLSearchParams`. If not, add a code comment explaining the API requirement. (Ref: Servant42 security assessment, 2026-03-22)
+
 ### Additional Notes
 - The Subscriber resource has an "address" array with multiple addresses. Separate direct review/editing of these would be beneficial, similar to the Contact operations added in v0.1.0.
 - Partner and Vendor resources would benefit from Get Many operations but OneBill doesn't support these endpoints so it's not possible yet.

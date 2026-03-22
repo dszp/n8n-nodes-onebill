@@ -3,6 +3,7 @@ import type {
 	ICredentialTestFunctions,
 	ICredentialsDecrypted,
 	IDataObject,
+	INode,
 	INodeCredentialTestResult,
 	INodeExecutionData,
 	INodeType,
@@ -10,6 +11,21 @@ import type {
 	JsonObject,
 } from 'n8n-workflow';
 import { NodeApiError, NodeOperationError } from 'n8n-workflow';
+
+/**
+ * Parse a JSON string from a node parameter, providing a user-friendly error
+ * message that names the field on invalid input.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function parseJsonField(node: INode, value: string, fieldName: string): any {
+	try {
+		return JSON.parse(value);
+	} catch {
+		throw new NodeOperationError(node, `Invalid JSON in '${fieldName}'`, {
+			description: 'Check the JSON syntax and try again',
+		});
+	}
+}
 
 import { oneBillApiRequest, oneBillApiRequestAllItems } from './GenericFunctions';
 
@@ -553,14 +569,12 @@ async function handleOrder(
 	if (operation === 'create' || operation === 'validate') {
 		const body: IDataObject = {
 			accountNumber: this.getNodeParameter('accountNumber', i) as string,
-			orderElement: JSON.parse(this.getNodeParameter('orderElements', i) as string),
+			orderElement: parseJsonField(this.getNode(), this.getNodeParameter('orderElements', i) as string, 'Order Elements'),
 		};
 		if (operation === 'create') {
 			const additionalFields = this.getNodeParameter('additionalFields', i) as IDataObject;
 			if (additionalFields.orderAttributes) {
-				additionalFields.orderAttributes = JSON.parse(
-					additionalFields.orderAttributes as string,
-				);
+				additionalFields.orderAttributes = parseJsonField(this.getNode(), additionalFields.orderAttributes as string, 'Order Attributes');
 			}
 			Object.assign(body, additionalFields);
 		}
@@ -607,7 +621,7 @@ async function handleOrder(
 
 	if (operation === 'updateQuote') {
 		const orderNumber = this.getNodeParameter('orderNumber', i) as string;
-		const body = JSON.parse(this.getNodeParameter('updateBody', i) as string) as IDataObject;
+		const body = parseJsonField(this.getNode(), this.getNodeParameter('updateBody', i) as string, 'Update Body') as IDataObject;
 		return await oneBillApiRequest.call(
 			this,
 			'PUT',
@@ -730,9 +744,7 @@ async function handleProduct(
 		};
 		const additionalFields = this.getNodeParameter('additionalFields', i) as IDataObject;
 		if (additionalFields.pricePlanInfos) {
-			additionalFields.pricePlanInfos = JSON.parse(
-				additionalFields.pricePlanInfos as string,
-			);
+			additionalFields.pricePlanInfos = parseJsonField(this.getNode(), additionalFields.pricePlanInfos as string, 'Price Plan Infos');
 		}
 		Object.assign(body, additionalFields);
 		return await oneBillApiRequest.call(this, 'POST', '/rest/ProductService/v1/product', body);
@@ -764,7 +776,7 @@ async function handleProduct(
 	}
 
 	if (operation === 'update') {
-		const body = JSON.parse(this.getNodeParameter('updateBody', i) as string) as IDataObject;
+		const body = parseJsonField(this.getNode(), this.getNodeParameter('updateBody', i) as string, 'Update Body') as IDataObject;
 		return await oneBillApiRequest.call(this, 'PUT', '/rest/ProductService/v1/product', body);
 	}
 
@@ -815,7 +827,7 @@ async function handleTicket(
 		const ticketNumber = this.getNodeParameter('ticketNumber', i) as string;
 		const updateFields = this.getNodeParameter('updateFields', i) as IDataObject;
 		if (updateFields.conversation) {
-			updateFields.conversation = JSON.parse(updateFields.conversation as string);
+			updateFields.conversation = parseJsonField(this.getNode(), updateFields.conversation as string, 'Conversation');
 		}
 		return await oneBillApiRequest.call(
 			this,
@@ -855,10 +867,10 @@ async function handleLead(
 		};
 		const additionalFields = this.getNodeParameter('additionalFields', i) as IDataObject;
 		if (additionalFields.contact && typeof additionalFields.contact === 'string') {
-			additionalFields.contact = JSON.parse(additionalFields.contact as string);
+			additionalFields.contact = parseJsonField(this.getNode(), additionalFields.contact as string, 'Contact');
 		}
 		if (additionalFields.customFields && typeof additionalFields.customFields === 'string') {
-			additionalFields.customFields = JSON.parse(additionalFields.customFields as string);
+			additionalFields.customFields = parseJsonField(this.getNode(), additionalFields.customFields as string, 'Custom Fields');
 		}
 		Object.assign(body, additionalFields);
 		return await oneBillApiRequest.call(this, 'POST', '/rest/SubscriberService/v1/lead', body);
@@ -893,10 +905,10 @@ async function handleLead(
 		const accountNumber = this.getNodeParameter('accountNumber', i) as string;
 		const updateFields = this.getNodeParameter('updateFields', i) as IDataObject;
 		if (updateFields.contact && typeof updateFields.contact === 'string') {
-			updateFields.contact = JSON.parse(updateFields.contact as string);
+			updateFields.contact = parseJsonField(this.getNode(), updateFields.contact as string, 'Contact');
 		}
 		if (updateFields.customFields && typeof updateFields.customFields === 'string') {
-			updateFields.customFields = JSON.parse(updateFields.customFields as string);
+			updateFields.customFields = parseJsonField(this.getNode(), updateFields.customFields as string, 'Custom Fields');
 		}
 		return await oneBillApiRequest.call(
 			this,
@@ -930,7 +942,7 @@ async function handleBundle(
 		};
 		const additionalFields = this.getNodeParameter('additionalFields', i) as IDataObject;
 		if (additionalFields.bundleProduct && typeof additionalFields.bundleProduct === 'string') {
-			additionalFields.bundleProduct = JSON.parse(additionalFields.bundleProduct as string);
+			additionalFields.bundleProduct = parseJsonField(this.getNode(), additionalFields.bundleProduct as string, 'Bundle Product');
 		}
 		Object.assign(body, additionalFields);
 		return await oneBillApiRequest.call(
@@ -967,7 +979,7 @@ async function handleBundle(
 	}
 
 	if (operation === 'update') {
-		const body = JSON.parse(this.getNodeParameter('updateBody', i) as string) as IDataObject;
+		const body = parseJsonField(this.getNode(), this.getNodeParameter('updateBody', i) as string, 'Update Body') as IDataObject;
 		return await oneBillApiRequest.call(
 			this,
 			'PUT',
@@ -990,10 +1002,10 @@ async function handlePartner(
 		};
 		const additionalFields = this.getNodeParameter('additionalFields', i) as IDataObject;
 		if (additionalFields.contacts && typeof additionalFields.contacts === 'string') {
-			additionalFields.contacts = JSON.parse(additionalFields.contacts as string);
+			additionalFields.contacts = parseJsonField(this.getNode(), additionalFields.contacts as string, 'Contacts');
 		}
 		if (additionalFields.customFields && typeof additionalFields.customFields === 'string') {
-			additionalFields.customFields = JSON.parse(additionalFields.customFields as string);
+			additionalFields.customFields = parseJsonField(this.getNode(), additionalFields.customFields as string, 'Custom Fields');
 		}
 		Object.assign(body, additionalFields);
 		return await oneBillApiRequest.call(
@@ -1062,9 +1074,7 @@ async function handlePartner(
 
 	if (operation === 'deleteContacts') {
 		const accountNumber = this.getNodeParameter('accountNumber', i) as string;
-		const contactIds = JSON.parse(
-			this.getNodeParameter('contactIds', i) as string,
-		) as string[];
+		const contactIds = parseJsonField(this.getNode(), this.getNodeParameter('contactIds', i) as string, 'Contact IDs') as string[];
 		return await oneBillApiRequest.call(
 			this,
 			'PUT',
@@ -1092,7 +1102,7 @@ async function handlePartner(
 	}
 
 	if (operation === 'update') {
-		const body = JSON.parse(this.getNodeParameter('updateBody', i) as string) as IDataObject;
+		const body = parseJsonField(this.getNode(), this.getNodeParameter('updateBody', i) as string, 'Update Body') as IDataObject;
 		return await oneBillApiRequest.call(
 			this,
 			'PUT',
@@ -1115,10 +1125,10 @@ async function handleVendor(
 		};
 		const additionalFields = this.getNodeParameter('additionalFields', i) as IDataObject;
 		if (additionalFields.contacts && typeof additionalFields.contacts === 'string') {
-			additionalFields.contacts = JSON.parse(additionalFields.contacts as string);
+			additionalFields.contacts = parseJsonField(this.getNode(), additionalFields.contacts as string, 'Contacts');
 		}
 		if (additionalFields.customFields && typeof additionalFields.customFields === 'string') {
-			additionalFields.customFields = JSON.parse(additionalFields.customFields as string);
+			additionalFields.customFields = parseJsonField(this.getNode(), additionalFields.customFields as string, 'Custom Fields');
 		}
 		Object.assign(body, additionalFields);
 		return await oneBillApiRequest.call(
@@ -1139,7 +1149,7 @@ async function handleVendor(
 	}
 
 	if (operation === 'update') {
-		const body = JSON.parse(this.getNodeParameter('updateBody', i) as string) as IDataObject;
+		const body = parseJsonField(this.getNode(), this.getNodeParameter('updateBody', i) as string, 'Update Body') as IDataObject;
 		return await oneBillApiRequest.call(
 			this,
 			'PUT',
