@@ -35,7 +35,7 @@ For the **first release** (no previous tag):
 
 ```bash
 VERSION=$(node -p "require('./package.json').version")
-CHANGELOG_ANCHOR=$(echo "${VERSION}" | tr '.' '')
+CHANGELOG_ANCHOR=$(scripts/changelog-anchor.sh "${VERSION}")
 
 gh release create "v${VERSION}" \
   "dszp-n8n-nodes-onebill-${VERSION}.tgz" \
@@ -46,7 +46,7 @@ gh release create "v${VERSION}" \
 
 Initial release of @dszp/n8n-nodes-onebill v${VERSION}.
 
-See [CHANGELOG](https://github.com/dszp/n8n-nodes-onebill/blob/v${VERSION}/CHANGELOG.md#${CHANGELOG_ANCHOR}---$(date +%Y-%m-%d)) for detailed changes.
+See [CHANGELOG](https://github.com/dszp/n8n-nodes-onebill/blob/v${VERSION}/CHANGELOG.md#${CHANGELOG_ANCHOR}) for detailed changes.
 EOF
 )"
 ```
@@ -56,7 +56,7 @@ For **subsequent releases** (previous tag exists):
 ```bash
 VERSION=$(node -p "require('./package.json').version")
 PREV_TAG=$(git describe --tags --abbrev=0)
-CHANGELOG_ANCHOR=$(echo "${VERSION}" | tr -d '.')
+CHANGELOG_ANCHOR=$(scripts/changelog-anchor.sh "${VERSION}")
 
 gh release create "v${VERSION}" \
   "dszp-n8n-nodes-onebill-${VERSION}.tgz" \
@@ -69,7 +69,7 @@ gh release create "v${VERSION}" \
 
 **Full Changelog**: https://github.com/dszp/n8n-nodes-onebill/compare/${PREV_TAG}...v${VERSION}
 
-See [CHANGELOG](https://github.com/dszp/n8n-nodes-onebill/blob/v${VERSION}/CHANGELOG.md#${CHANGELOG_ANCHOR}---$(date +%Y-%m-%d)) for detailed changes.
+See [CHANGELOG](https://github.com/dszp/n8n-nodes-onebill/blob/v${VERSION}/CHANGELOG.md#${CHANGELOG_ANCHOR}) for detailed changes.
 EOF
 )"
 ```
@@ -101,7 +101,7 @@ Single block for a subsequent release after version bump is committed and pushed
 npm ci && npm run build && npm pack
 VERSION=$(node -p "require('./package.json').version")
 PREV_TAG=$(git describe --tags --abbrev=0)
-CHANGELOG_ANCHOR=$(echo "${VERSION}" | tr -d '.')
+CHANGELOG_ANCHOR=$(scripts/changelog-anchor.sh "${VERSION}")
 gh release create "v${VERSION}" \
   "dszp-n8n-nodes-onebill-${VERSION}.tgz" \
   --target main \
@@ -113,7 +113,7 @@ gh release create "v${VERSION}" \
 
 **Full Changelog**: https://github.com/dszp/n8n-nodes-onebill/compare/${PREV_TAG}...v${VERSION}
 
-See [CHANGELOG](https://github.com/dszp/n8n-nodes-onebill/blob/v${VERSION}/CHANGELOG.md#${CHANGELOG_ANCHOR}---$(date +%Y-%m-%d)) for detailed changes.
+See [CHANGELOG](https://github.com/dszp/n8n-nodes-onebill/blob/v${VERSION}/CHANGELOG.md#${CHANGELOG_ANCHOR}) for detailed changes.
 EOF
 )"
 ```
