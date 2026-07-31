@@ -3,9 +3,11 @@ import type {
 	ICredentialTestFunctions,
 	ICredentialsDecrypted,
 	IDataObject,
+	ILoadOptionsFunctions,
 	INode,
 	INodeCredentialTestResult,
 	INodeExecutionData,
+	INodePropertyOptions,
 	INodeType,
 	INodeTypeDescription,
 	JsonObject,
@@ -201,6 +203,41 @@ export class OneBill implements INodeType {
 			},
 			/* eslint-enable @n8n/community-nodes/no-deprecated-workflow-functions */
 		},
+
+		loadOptions: {
+			async getCustomFieldGroups(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+				const attributes = await loadDeclaredAttributes.call(this);
+				const keys = [...new Set(attributes.map((attribute) => attribute.key as string))];
+				return keys.sort().map((key) => ({ name: key, value: key }));
+			},
+
+			async getCustomFieldNames(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+				const group = this.getCurrentNodeParameter('group') as string;
+				if (!group) {
+					return [];
+				}
+
+				const attributes = await loadDeclaredAttributes.call(this);
+				const keys = new Set<string>();
+				for (const attribute of attributes) {
+					if (attribute.key !== group) {
+						continue;
+					}
+					const children = attribute.childAttribute;
+					if (Array.isArray(children)) {
+						for (const child of children as IDataObject[]) {
+							keys.add(child.key as string);
+						}
+					}
+				}
+
+				// A non-group attribute has no children — it is its own field.
+				if (keys.size === 0) {
+					return [{ name: group, value: group }];
+				}
+				return [...keys].sort().map((key) => ({ name: key, value: key }));
+			},
+		},
 	};
 
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
@@ -272,6 +309,173 @@ function stripPasswordsFromContacts(contacts: IDataObject[]): void {
 }
 
 /**
+ * Build a full-record PUT body from a record that was just read back from the API.
+ *
+ * OneBill treats a PUT as a whole-record replace: a body carrying only the changed
+ * keys returns 200 and applies the change, but silently clears unrelated fields on
+ * the record.  Every update must therefore be a read-modify-write of the complete
+ * record.  `status` is a response artefact and must not be echoed back.
+ */
+function buildFullUpdateBody(record: IDataObject, changes: IDataObject): IDataObject {
+	const body: IDataObject = { ...record, ...changes };
+	delete body.status;
+
+	if (Array.isArray(body.accountAttribute)) {
+		body.accountAttribute = stripBlankAttributeGroups(body.accountAttribute as IDataObject[]);
+	}
+
+	return body;
+}
+
+/**
+ * True when a custom-field row carries no value at all.  A blank placeholder child omits
+ * the `value` key entirely rather than sending an empty string.
+ */
+function hasAttributeValue(attribute: IDataObject): boolean {
+	return typeof attribute.value === 'string' && attribute.value !== '';
+}
+
+/**
+ * Drop custom-field group instances that hold no values.
+ *
+ * OneBill materialises a blank instance of every declared group onto every record, so a
+ * record read back for a write is full of placeholders.  Echoing them returns meaningless
+ * rows, and if any field in the group is marked Mandatory the whole write is rejected.
+ * Partially filled instances are kept — a blank optional field beside a populated one is
+ * meaningful.
+ */
+function stripBlankAttributeGroups(attributes: IDataObject[]): IDataObject[] {
+	return attributes.filter((attribute) => {
+		const children = attribute.childAttribute;
+		if (Array.isArray(children)) {
+			return (children as IDataObject[]).some(hasAttributeValue);
+		}
+		return hasAttributeValue(attribute);
+	});
+}
+
+/**
+ * Read the tenant's declared custom-field schema off a live record.
+ *
+ * There is no API that lists custom-field definitions — declaring one is a UI action.  But
+ * OneBill returns a blank instance of every declared group on every record, so any single
+ * record carries the full schema.  The search rows do not include `accountAttribute`, so
+ * this has to be a single-record GET.
+ */
+async function loadDeclaredAttributes(this: ILoadOptionsFunctions): Promise<IDataObject[]> {
+	const resource = (this.getCurrentNodeParameter('resource') as string) ?? 'subscriber';
+	const isLead = resource === 'lead';
+	const collection = isLead ? 'leads' : 'subscribers';
+
+	let accountNumber = this.getCurrentNodeParameter('accountNumber') as string | undefined;
+
+	if (!accountNumber) {
+		// Creating a record: any existing one exposes the same declared schema.
+		const first = await oneBillApiRequestAllItems.call(
+			this,
+			'GET',
+			`/rest/SubscriberService/v1/${collection}`,
+			{},
+			{},
+			'subscriber',
+			1,
+		);
+		accountNumber = first[0]?.accountNumber as string | undefined;
+	}
+
+	if (!accountNumber) {
+		return [];
+	}
+
+	const record = await oneBillApiRequest.call(
+		this,
+		'GET',
+		`/rest/SubscriberService/v1/${collection}/${encodeURIComponent(accountNumber)}`,
+	);
+
+	const attributes = record.accountAttribute;
+	return Array.isArray(attributes) ? (attributes as IDataObject[]) : [];
+}
+
+interface CustomFieldEntry {
+	group: string;
+	fieldKey: string;
+	value: string;
+	instance: number;
+}
+
+/**
+ * Read the Custom Fields fixedCollection into a plain list, dropping rows with no group set.
+ */
+function readCustomFieldEntries(parameter: IDataObject): CustomFieldEntry[] {
+	const rows = (parameter?.field as IDataObject[]) ?? [];
+	return rows
+		.filter((row) => row.group)
+		.map((row) => ({
+			group: row.group as string,
+			fieldKey: (row.fieldKey as string) || (row.group as string),
+			value: (row.value as string) ?? '',
+			instance: Math.max(1, (row.instance as number) || 1),
+		}));
+}
+
+/**
+ * Merge Custom Fields rows into the record's `accountAttribute` array.
+ *
+ * The UI numbers group instances positionally from 1; OneBill identifies them by
+ * `aggregator`, which the caller must assign — omitting it on a second instance fails with
+ * `10CV00014 Duplicate key`.  Instance N therefore maps onto the Nth existing instance of
+ * that group, and anything beyond that is created with `max(aggregator) + 1` for that group
+ * key.  Numbering is per key: blank placeholders of different groups all carry 0 at once.
+ *
+ * Children are merged, not replaced — OneBill leaves unnamed children of a group untouched,
+ * so only the rows the user listed are sent.
+ */
+function applyCustomFields(existing: IDataObject[], entries: CustomFieldEntry[]): IDataObject[] {
+	const result: IDataObject[] = existing.map((group) => ({
+		...group,
+		childAttribute: Array.isArray(group.childAttribute)
+			? (group.childAttribute as IDataObject[]).map((child) => ({ ...child }))
+			: group.childAttribute,
+	}));
+
+	for (const entry of entries) {
+		const instances = result.filter(
+			(group) => group.key === entry.group && Number(group.aggregator) >= 1,
+		);
+
+		let target: IDataObject | undefined = instances[entry.instance - 1];
+		if (!target) {
+			const highest = result
+				.filter((group) => group.key === entry.group)
+				.reduce((max, group) => Math.max(max, Number(group.aggregator) || 0), 0);
+			target = { key: entry.group, aggregator: highest + 1 };
+			// A flat (non-group) attribute holds its value directly; a group holds children.
+			if (entry.fieldKey !== entry.group) {
+				target.childAttribute = [];
+			}
+			result.push(target);
+		}
+
+		if (entry.fieldKey === entry.group) {
+			target.value = entry.value;
+			continue;
+		}
+
+		const children = (target.childAttribute as IDataObject[]) ?? [];
+		const child = children.find((candidate) => candidate.key === entry.fieldKey);
+		if (child) {
+			child.value = entry.value;
+		} else {
+			children.push({ key: entry.fieldKey, value: entry.value });
+		}
+		target.childAttribute = children;
+	}
+
+	return result;
+}
+
+/**
  * Build a communicationPoint array from individual contact fields
  * (emailAddress, contactPhone, cellPhone, alternatePhone) and remove
  * those fields from the source object so they are not sent as-is.
@@ -326,7 +530,21 @@ async function handleSubscriber(
 			email: this.getNodeParameter('email', i) as string,
 		};
 		const additionalFields = this.getNodeParameter('additionalFields', i) as IDataObject;
+		if (additionalFields.accountAttribute && typeof additionalFields.accountAttribute === 'string') {
+			additionalFields.accountAttribute = parseJsonField(this.getNode(), additionalFields.accountAttribute as string, 'Account Attributes');
+		}
 		Object.assign(body, additionalFields);
+
+		const customFields = readCustomFieldEntries(
+			this.getNodeParameter('customFieldValues', i, {}) as IDataObject,
+		);
+		if (customFields.length > 0) {
+			body.accountAttribute = applyCustomFields(
+				(body.accountAttribute as IDataObject[]) ?? [],
+				customFields,
+			);
+		}
+
 		return await oneBillApiRequest.call(this, 'POST', '/rest/SubscriberService/v1/subscriber', body);
 	}
 
@@ -364,11 +582,34 @@ async function handleSubscriber(
 	if (operation === 'update') {
 		const accountNumber = this.getNodeParameter('accountNumber', i) as string;
 		const updateFields = this.getNodeParameter('updateFields', i) as IDataObject;
+		if (updateFields.accountAttribute && typeof updateFields.accountAttribute === 'string') {
+			updateFields.accountAttribute = parseJsonField(this.getNode(), updateFields.accountAttribute as string, 'Account Attributes');
+		}
+
+		// Read the whole record first — see buildFullUpdateBody.  Deliberately a raw GET:
+		// contact password hashes must survive the round-trip, so nothing is stripped here.
+		const subscriber = await oneBillApiRequest.call(
+			this,
+			'GET',
+			`/rest/SubscriberService/v1/subscribers/${encodeURIComponent(accountNumber)}`,
+		);
+
+		const body = buildFullUpdateBody(subscriber, updateFields);
+		const customFields = readCustomFieldEntries(
+			this.getNodeParameter('customFieldValues', i, {}) as IDataObject,
+		);
+		if (customFields.length > 0) {
+			body.accountAttribute = applyCustomFields(
+				(body.accountAttribute as IDataObject[]) ?? [],
+				customFields,
+			);
+		}
+
 		return await oneBillApiRequest.call(
 			this,
 			'PUT',
 			`/rest/SubscriberService/v1/subscribers/${encodeURIComponent(accountNumber)}`,
-			updateFields,
+			body,
 		);
 	}
 
@@ -470,12 +711,12 @@ async function handleSubscriber(
 		const contacts = (subscriber.contact as IDataObject[]) || [];
 		contacts.push(contactFields);
 
-		// Update subscriber with new contact array
+		// Write the whole record back, not just the contact array — see buildFullUpdateBody
 		const response = await oneBillApiRequest.call(
 			this,
 			'PUT',
 			`/rest/SubscriberService/v1/subscribers/${encodeURIComponent(accountNumber)}`,
-			{ contact: contacts },
+			buildFullUpdateBody(subscriber, { contact: contacts }),
 		);
 		return response;
 	}
@@ -516,12 +757,12 @@ async function handleSubscriber(
 		// Merge update fields into the existing contact
 		Object.assign(contacts[contactIndex], updateContactFields);
 
-		// Update subscriber with modified contact array
+		// Write the whole record back, not just the contact array — see buildFullUpdateBody
 		const response = await oneBillApiRequest.call(
 			this,
 			'PUT',
 			`/rest/SubscriberService/v1/subscribers/${encodeURIComponent(accountNumber)}`,
-			{ contact: contacts },
+			buildFullUpdateBody(subscriber, { contact: contacts }),
 		);
 		return response;
 	}
@@ -548,12 +789,12 @@ async function handleSubscriber(
 
 		contacts.splice(contactIndex, 1);
 
-		// Update subscriber with modified contact array
+		// Write the whole record back, not just the contact array — see buildFullUpdateBody
 		await oneBillApiRequest.call(
 			this,
 			'PUT',
 			`/rest/SubscriberService/v1/subscribers/${encodeURIComponent(accountNumber)}`,
-			{ contact: contacts },
+			buildFullUpdateBody(subscriber, { contact: contacts }),
 		);
 		return { deleted: true };
 	}
@@ -869,10 +1110,21 @@ async function handleLead(
 		if (additionalFields.contact && typeof additionalFields.contact === 'string') {
 			additionalFields.contact = parseJsonField(this.getNode(), additionalFields.contact as string, 'Contact');
 		}
-		if (additionalFields.customFields && typeof additionalFields.customFields === 'string') {
-			additionalFields.customFields = parseJsonField(this.getNode(), additionalFields.customFields as string, 'Custom Fields');
+		if (additionalFields.accountAttribute && typeof additionalFields.accountAttribute === 'string') {
+			additionalFields.accountAttribute = parseJsonField(this.getNode(), additionalFields.accountAttribute as string, 'Account Attributes');
 		}
 		Object.assign(body, additionalFields);
+
+		const customFields = readCustomFieldEntries(
+			this.getNodeParameter('customFieldValues', i, {}) as IDataObject,
+		);
+		if (customFields.length > 0) {
+			body.accountAttribute = applyCustomFields(
+				(body.accountAttribute as IDataObject[]) ?? [],
+				customFields,
+			);
+		}
+
 		return await oneBillApiRequest.call(this, 'POST', '/rest/SubscriberService/v1/lead', body);
 	}
 
@@ -907,14 +1159,33 @@ async function handleLead(
 		if (updateFields.contact && typeof updateFields.contact === 'string') {
 			updateFields.contact = parseJsonField(this.getNode(), updateFields.contact as string, 'Contact');
 		}
-		if (updateFields.customFields && typeof updateFields.customFields === 'string') {
-			updateFields.customFields = parseJsonField(this.getNode(), updateFields.customFields as string, 'Custom Fields');
+		if (updateFields.accountAttribute && typeof updateFields.accountAttribute === 'string') {
+			updateFields.accountAttribute = parseJsonField(this.getNode(), updateFields.accountAttribute as string, 'Account Attributes');
 		}
+
+		// Read the whole record first — see buildFullUpdateBody.  Raw GET on purpose, as above.
+		const lead = await oneBillApiRequest.call(
+			this,
+			'GET',
+			`/rest/SubscriberService/v1/leads/${encodeURIComponent(accountNumber)}`,
+		);
+
+		const body = buildFullUpdateBody(lead, updateFields);
+		const customFields = readCustomFieldEntries(
+			this.getNodeParameter('customFieldValues', i, {}) as IDataObject,
+		);
+		if (customFields.length > 0) {
+			body.accountAttribute = applyCustomFields(
+				(body.accountAttribute as IDataObject[]) ?? [],
+				customFields,
+			);
+		}
+
 		return await oneBillApiRequest.call(
 			this,
 			'PUT',
 			`/rest/SubscriberService/v1/leads/${encodeURIComponent(accountNumber)}`,
-			updateFields,
+			body,
 		);
 	}
 
@@ -1003,9 +1274,6 @@ async function handlePartner(
 		const additionalFields = this.getNodeParameter('additionalFields', i) as IDataObject;
 		if (additionalFields.contacts && typeof additionalFields.contacts === 'string') {
 			additionalFields.contacts = parseJsonField(this.getNode(), additionalFields.contacts as string, 'Contacts');
-		}
-		if (additionalFields.customFields && typeof additionalFields.customFields === 'string') {
-			additionalFields.customFields = parseJsonField(this.getNode(), additionalFields.customFields as string, 'Custom Fields');
 		}
 		Object.assign(body, additionalFields);
 		return await oneBillApiRequest.call(
@@ -1126,9 +1394,6 @@ async function handleVendor(
 		const additionalFields = this.getNodeParameter('additionalFields', i) as IDataObject;
 		if (additionalFields.contacts && typeof additionalFields.contacts === 'string') {
 			additionalFields.contacts = parseJsonField(this.getNode(), additionalFields.contacts as string, 'Contacts');
-		}
-		if (additionalFields.customFields && typeof additionalFields.customFields === 'string') {
-			additionalFields.customFields = parseJsonField(this.getNode(), additionalFields.customFields as string, 'Custom Fields');
 		}
 		Object.assign(body, additionalFields);
 		return await oneBillApiRequest.call(

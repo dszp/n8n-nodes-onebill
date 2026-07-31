@@ -1,6 +1,64 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 (2026-07-31)
+
+Data-integrity release. Several operations were silently losing data against a live OneBill
+tenant — truncating lists, and clearing fields nobody asked to change. All of the behaviour
+described below was verified against a live tenant rather than inferred from the OpenAPI
+spec, which is a Postman export and is wrong in places.
+
+### Breaking Changes
+
+- **Removed the `Custom Fields (JSON)` input** from Subscriber, Lead, Partner and Vendor. The
+  `customFields` key does not exist in the OneBill API, so anything entered there was silently
+  discarded — on Subscriber the value was not even parsed, so the literal string `"{}"` was
+  posted. The real custom-field surface is `accountAttribute`, now exposed properly (see below).
+  Workflows using this field were never writing data and should move to `Custom Fields`.
+
+### Fixed
+
+- **"Return All" stopped after the first page** on any endpoint that does not report a
+  `totalCount` — Lead and Invoice list operations returned at most 50 records and looked
+  successful. Pagination now terminates on a short page, treats `totalCount` as an optimisation
+  where the endpoint supplies it, and advances by the number of rows actually received rather
+  than the requested page size (the Product endpoint ignores `resultCount` entirely). If an
+  endpoint ignores the `startCount` offset the node now raises an error instead of returning a
+  silently truncated list.
+- **Updates cleared fields that were not being edited.** OneBill applies a PUT as a whole-record
+  replace, so sending only the changed keys wiped unrelated data — a partial update was observed
+  clearing `quoteTemplateName`, populating `accountOwnerId` and moving `nextCycleDate`.
+  Subscriber Update, Lead Update, and the Add/Update/Remove Contact operations now read the full
+  record and write it back with only the requested change applied. Contact password hashes and
+  custom field values survive the round-trip.
+- **Failed requests were reported as empty results.** OneBill returns some failures in-band as
+  HTTP 200 with no data, so a rejected query was indistinguishable from a genuinely empty list.
+  List operations now raise the error instead of returning `[]`.
+- **Blank custom-field placeholders are stripped before writing.** OneBill returns an empty
+  instance of every declared custom-field group on every record; echoing those back writes
+  meaningless rows, and fails outright if any field in the group is marked Mandatory.
+
+### New Features
+
+- **Custom Fields** on Subscriber and Lead, create and update. Add a row, choose the group and
+  field from live dropdowns read from the tenant's own declarations, set a value, and pick which
+  repeat of the group it belongs to. Instance numbering is positional and the node assigns the
+  underlying identifiers, which OneBill requires the caller to supply. Existing values that are
+  not listed are left untouched.
+- **Account Attributes (JSON)** on Subscriber and Lead, create and update — the raw
+  `accountAttribute` array, for cases the structured input does not cover, such as deleting an
+  instance.
+- **External ID** on Subscriber and Lead (create and update), and Partner and Vendor (create).
+  Maximum 64 characters; OneBill rejects the whole update if the value is longer.
+- **Status filter** on Subscriber → Get Many. OneBill returns only active accounts when no
+  status is given, without indicating it, so closed accounts were simply missing. Accepts
+  `Active`, `Closed` and `Inactive`; the other statuses shown in the OneBill interface are
+  rejected by the API.
+
+### Improvements
+
+- Added warnings to the operations that still send only the fields you set — Ticket Update,
+  Invoice Modify, and the raw-JSON update bodies on Product, Bundle, Partner, Vendor and Order.
+  These may clear values that are left out, which is not yet verified for those endpoints.
 
 ### Security
 

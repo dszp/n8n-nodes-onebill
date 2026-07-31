@@ -60,6 +60,19 @@ export const partnerOperations: INodeProperties[] = [
 ];
 
 export const partnerFields: INodeProperties[] = [
+	{
+		displayName:
+			'OneBill applies an update as a whole-record replace. Send the complete record, not only the fields you are changing — anything omitted may be cleared, including custom field values. Read the record first and edit the result.',
+		name: 'partnerUpdateNotice',
+		type: 'notice',
+		default: '',
+		displayOptions: {
+			show: {
+				resource: ['partner'],
+				operation: ['update'],
+			},
+		},
+	},
 	// ----------------------------------
 	//         partner: create
 	// ----------------------------------
@@ -141,19 +154,19 @@ export const partnerFields: INodeProperties[] = [
 				description: 'The country of the billing address',
 			},
 			{
-				displayName: 'Custom Fields (JSON)',
-				name: 'customFields',
-				type: 'json',
-				default: '{}',
-				description: 'Custom fields as a JSON object',
-			},
-			{
 				displayName: 'Email',
 				name: 'email',
 				type: 'string',
 				placeholder: 'e.g. nathan@example.com',
 				default: '',
 				description: 'The email address of the primary contact',
+			},
+			{
+				displayName: 'External ID',
+				name: 'externalId',
+				type: 'string',
+				default: '',
+				description: 'An identifier for this account in an external system. Maximum 64 characters — OneBill rejects the whole update if the value is longer, leaving the previous value in place.',
 			},
 			{
 				displayName: 'First Name',

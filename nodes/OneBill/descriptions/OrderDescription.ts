@@ -54,6 +54,19 @@ export const orderOperations: INodeProperties[] = [
 ];
 
 export const orderFields: INodeProperties[] = [
+	{
+		displayName:
+			'OneBill applies an update as a whole-record replace. Send the complete record, not only the fields you are changing — anything omitted may be cleared, including custom field values. Read the record first and edit the result.',
+		name: 'orderUpdateQuoteNotice',
+		type: 'notice',
+		default: '',
+		displayOptions: {
+			show: {
+				resource: ['order'],
+				operation: ['updateQuote'],
+			},
+		},
+	},
 	// ----------------------------------
 	//         order: create / validate
 	// ----------------------------------

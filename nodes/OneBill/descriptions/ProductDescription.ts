@@ -48,6 +48,19 @@ export const productOperations: INodeProperties[] = [
 ];
 
 export const productFields: INodeProperties[] = [
+	{
+		displayName:
+			'OneBill applies an update as a whole-record replace. Send the complete record, not only the fields you are changing — anything omitted may be cleared, including custom field values. Read the record first and edit the result.',
+		name: 'productUpdateNotice',
+		type: 'notice',
+		default: '',
+		displayOptions: {
+			show: {
+				resource: ['product'],
+				operation: ['update'],
+			},
+		},
+	},
 	// ----------------------------------
 	//         product: create
 	// ----------------------------------

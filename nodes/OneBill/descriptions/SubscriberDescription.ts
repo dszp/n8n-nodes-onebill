@@ -102,6 +102,65 @@ export const subscriberOperations: INodeProperties[] = [
 ];
 
 export const subscriberFields: INodeProperties[] = [
+	{
+		displayName: 'Custom Fields',
+		name: 'customFieldValues',
+		type: 'fixedCollection',
+		typeOptions: { multipleValues: true },
+		placeholder: 'Add Custom Field',
+		default: {},
+		displayOptions: {
+			show: {
+				resource: ['subscriber'],
+				operation: ['create', 'update'],
+			},
+		},
+		description:
+			'Values for the custom fields declared in OneBill under Settings > Custom Fields. Existing values you do not list here are left as they are. Marking a custom field Mandatory in OneBill makes every update to an account that has no value for it fail, so avoid Mandatory on fields this node writes.',
+		options: [
+			{
+				displayName: 'Field',
+				name: 'field',
+				values: [
+					{
+						displayName: 'Group Name or ID',
+						name: 'group',
+						type: 'options',
+						typeOptions: { loadOptionsMethod: 'getCustomFieldGroups' },
+						default: '',
+						description: 'Choose a group from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+					},
+					{
+						displayName: 'Field Name or ID',
+						name: 'fieldKey',
+						type: 'options',
+						typeOptions: {
+							loadOptionsMethod: 'getCustomFieldNames',
+							loadOptionsDependsOn: ['group'],
+						},
+						default: '',
+						description: 'Choose a field from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+					},
+					{
+						displayName: 'Value',
+						name: 'value',
+						type: 'string',
+						default: '',
+						description: 'The value to store. OneBill returns every custom field value as a string.',
+					},
+					{
+						displayName: 'Instance',
+						name: 'instance',
+						type: 'number',
+						typeOptions: { minValue: 1 },
+						default: 1,
+						description:
+							'Which repeat of the group this value belongs to, counting from 1. Rows sharing a number fill the same instance. A number beyond the instances already on the record creates a new one.',
+					},
+				],
+			},
+		],
+	},
 	// ----------------------------------
 	//         subscriber: create
 	// ----------------------------------
@@ -176,6 +235,13 @@ export const subscriberFields: INodeProperties[] = [
 		},
 		options: [
 			{
+				displayName: 'Account Attributes (JSON)',
+				name: 'accountAttribute',
+				type: 'json',
+				default: '[]',
+				description: 'Custom field values, as a JSON array in the shape the API returns them under \'accountAttribute\'. The fields must already be declared in OneBill under Settings > Custom Fields. Read a record first to see the exact keys and nesting.',
+			},
+			{
 				displayName: 'Account Type',
 				name: 'accountType',
 				type: 'string',
@@ -239,11 +305,11 @@ export const subscriberFields: INodeProperties[] = [
 				description: 'The currency code (e.g. USD, EUR)',
 			},
 			{
-				displayName: 'Custom Fields (JSON)',
-				name: 'customFields',
-				type: 'json',
-				default: '{}',
-				description: 'Custom fields as a JSON object',
+				displayName: 'External ID',
+				name: 'externalId',
+				type: 'string',
+				default: '',
+				description: 'An identifier for this account in an external system. Maximum 64 characters — OneBill rejects the whole update if the value is longer, leaving the previous value in place.',
 			},
 			{
 				displayName: 'Invoice Delivery Preference',
@@ -389,6 +455,19 @@ export const subscriberFields: INodeProperties[] = [
 				default: true,
 				description: 'Whether to sort results in ascending order',
 			},
+			{
+				displayName: 'Status',
+				name: 'status',
+				type: 'options',
+				options: [
+					{ name: 'Active', value: 'Active' },
+					{ name: 'Closed', value: 'Closed' },
+					{ name: 'Inactive', value: 'Inactive' },
+				],
+				default: 'Active',
+				description:
+					'Which account status to return. OneBill returns active accounts only when this is not set, without saying so, so a closed account is missing rather than reported. Set it explicitly, or run the operation once per status, to see everything. Only these three values are accepted — Delinquent, Suspended and the other statuses shown in the OneBill interface are rejected.',
+			},
 		],
 	},
 
@@ -408,6 +487,13 @@ export const subscriberFields: INodeProperties[] = [
 			},
 		},
 		options: [
+			{
+				displayName: 'Account Attributes (JSON)',
+				name: 'accountAttribute',
+				type: 'json',
+				default: '[]',
+				description: 'Custom field values, as a JSON array in the shape the API returns them under \'accountAttribute\'. The fields must already be declared in OneBill under Settings > Custom Fields. Read a record first to see the exact keys and nesting.',
+			},
 			{
 				displayName: 'Account Name',
 				name: 'accountName',
@@ -451,19 +537,19 @@ export const subscriberFields: INodeProperties[] = [
 				description: 'The country of the billing address',
 			},
 			{
-				displayName: 'Custom Fields (JSON)',
-				name: 'customFields',
-				type: 'json',
-				default: '{}',
-				description: 'Custom fields as a JSON object',
-			},
-			{
 				displayName: 'Email',
 				name: 'email',
 				type: 'string',
 				placeholder: 'name@email.com',
 				default: '',
 				description: 'The email address of the primary contact',
+			},
+			{
+				displayName: 'External ID',
+				name: 'externalId',
+				type: 'string',
+				default: '',
+				description: 'An identifier for this account in an external system. Maximum 64 characters — OneBill rejects the whole update if the value is longer, leaving the previous value in place.',
 			},
 			{
 				displayName: 'First Name',

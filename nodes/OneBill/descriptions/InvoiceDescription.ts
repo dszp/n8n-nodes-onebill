@@ -36,6 +36,19 @@ export const invoiceOperations: INodeProperties[] = [
 ];
 
 export const invoiceFields: INodeProperties[] = [
+	{
+		displayName:
+			'OneBill applies an update as a whole-record replace, and this operation sends only the fields you set below. Values you leave out may be cleared, including custom field values. This has not yet been verified for this endpoint, so read the record first and re-send everything you want to keep.',
+		name: 'invoiceModifyNotice',
+		type: 'notice',
+		default: '',
+		displayOptions: {
+			show: {
+				resource: ['invoice'],
+				operation: ['modify'],
+			},
+		},
+	},
 	// ----------------------------------
 	//         invoice: get / modify
 	// ----------------------------------

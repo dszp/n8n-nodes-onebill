@@ -42,6 +42,19 @@ export const bundleOperations: INodeProperties[] = [
 ];
 
 export const bundleFields: INodeProperties[] = [
+	{
+		displayName:
+			'OneBill applies an update as a whole-record replace. Send the complete record, not only the fields you are changing — anything omitted may be cleared, including custom field values. Read the record first and edit the result.',
+		name: 'bundleUpdateNotice',
+		type: 'notice',
+		default: '',
+		displayOptions: {
+			show: {
+				resource: ['bundle'],
+				operation: ['update'],
+			},
+		},
+	},
 	// ----------------------------------
 	//         bundle: create
 	// ----------------------------------
