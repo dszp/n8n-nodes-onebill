@@ -566,17 +566,51 @@ async function handleSubscriber(
 	if (operation === 'getAll') {
 		const returnAll = this.getNodeParameter('returnAll', i) as boolean;
 		const filters = this.getNodeParameter('filters', i) as IDataObject;
-		const qs: IDataObject = { ...filters };
+		const statuses = this.getNodeParameter('status', i, []) as string[];
 		const limit = returnAll ? undefined : (this.getNodeParameter('limit', i) as number);
-		return await oneBillApiRequestAllItems.call(
-			this,
-			'GET',
-			'/rest/SubscriberService/v1/subscribers',
-			{},
-			qs,
-			'subscriber',
-			limit,
-		);
+
+		// OneBill accepts one status per search and has no "all" value, so covering several
+		// means a pass each, merged.  With none selected the endpoint applies its own default,
+		// which is active accounts only.
+		const passes: Array<string | undefined> = statuses.length > 0 ? statuses : [undefined];
+		const seen = new Set<string>();
+		const merged: IDataObject[] = [];
+
+		for (const status of passes) {
+			const qs: IDataObject = { ...filters };
+			if (status) {
+				qs.status = status;
+			}
+
+			const page = await oneBillApiRequestAllItems.call(
+				this,
+				'GET',
+				'/rest/SubscriberService/v1/subscribers',
+				{},
+				qs,
+				'subscriber',
+				limit,
+			);
+
+			// An account can only hold one status, but merge defensively — a duplicate would
+			// otherwise be reported twice with no indication.
+			for (const subscriber of page) {
+				const accountNumber = subscriber.accountNumber as string | undefined;
+				if (accountNumber !== undefined) {
+					if (seen.has(accountNumber)) {
+						continue;
+					}
+					seen.add(accountNumber);
+				}
+				merged.push(subscriber);
+			}
+
+			if (limit && merged.length >= limit) {
+				break;
+			}
+		}
+
+		return limit ? merged.slice(0, limit) : merged;
 	}
 
 	if (operation === 'update') {
@@ -840,6 +874,16 @@ async function handleOrder(
 		const filters = this.getNodeParameter('filters', i) as IDataObject;
 		const qs: IDataObject = { ...filters };
 		const limit = returnAll ? undefined : (this.getNodeParameter('limit', i) as number);
+
+		// The orders search selects a field with searchBy and matches it with searchString,
+		// the same shape the subscriber search uses.  A bare `accountNumber` query parameter
+		// is ignored, and the result is every account's orders rather than an empty list.
+		if (qs.accountNumber) {
+			qs.searchBy = 'accountNumber';
+			qs.searchString = qs.accountNumber;
+			delete qs.accountNumber;
+		}
+
 		return await oneBillApiRequestAllItems.call(
 			this,
 			'GET',
@@ -893,6 +937,15 @@ async function handleInvoice(
 		const filters = this.getNodeParameter('filters', i) as IDataObject;
 		const qs: IDataObject = { ...filters };
 		const limit = returnAll ? undefined : (this.getNodeParameter('limit', i) as number);
+
+		// As with orders: a bare `accountNumber` query parameter is ignored and every
+		// account's invoices come back.  The search selects its field with searchBy.
+		if (qs.accountNumber) {
+			qs.searchBy = 'accountNumber';
+			qs.searchString = qs.accountNumber;
+			delete qs.accountNumber;
+		}
+
 		return await oneBillApiRequestAllItems.call(
 			this,
 			'GET',

@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.2.1 (2026-07-31)
+
+### Fixed
+
+- **Account Number filters were silently ignored** on Order > Get Many and Invoice > Get Many,
+  returning every account's records up to the limit rather than the one asked for. The account
+  number was sent as a plain query parameter, which those endpoints do not read — the search
+  selects its field with `searchBy` and matches it with `searchString`. Account Number is now a
+  shortcut that sets both.
+- **Search String had no effect** on the same two operations, because there was no `Search By`
+  beside it and a search string with no field to search on is ignored. `Search By` has been
+  added to both.
+
+### Improvements
+
+- **Subscriber > Get Many: Status is now shown on the form** rather than hidden among the
+  optional filters, and accepts more than one value. OneBill returns active accounts only and
+  does not say so, so the default is visible as `Active` rather than being an unset field whose
+  effect is invisible. The API takes one status per search and has no "all" value, so selecting
+  several runs one search per status and merges the results on account number. Existing
+  workflows are unaffected: the default returns what an unset filter returned.
+
 ## 0.2.0 (2026-07-31)
 
 Data-integrity release. Several operations were silently losing data against a live OneBill

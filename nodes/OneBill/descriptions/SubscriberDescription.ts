@@ -415,6 +415,25 @@ export const subscriberFields: INodeProperties[] = [
 		description: 'Max number of results to return',
 	},
 	{
+		displayName: 'Status',
+		name: 'status',
+		type: 'multiOptions',
+		options: [
+			{ name: 'Active', value: 'Active' },
+			{ name: 'Closed', value: 'Closed' },
+			{ name: 'Inactive', value: 'Inactive' },
+		],
+		default: ['Active'],
+		displayOptions: {
+			show: {
+				resource: ['subscriber'],
+				operation: ['getAll'],
+			},
+		},
+		description:
+			'Which account statuses to return. OneBill returns active accounts only and does not say so, which is why this defaults to Active rather than to everything. There is no "all" value in the API and only one status can be asked for at a time, so selecting several runs one search per status and merges the results. These three are the only values accepted — Delinquent, Suspended and the other statuses shown in the OneBill interface are rejected by the API.',
+	},
+	{
 		displayName: 'Filters',
 		name: 'filters',
 		type: 'collection',
@@ -454,19 +473,6 @@ export const subscriberFields: INodeProperties[] = [
 				type: 'boolean',
 				default: true,
 				description: 'Whether to sort results in ascending order',
-			},
-			{
-				displayName: 'Status',
-				name: 'status',
-				type: 'options',
-				options: [
-					{ name: 'Active', value: 'Active' },
-					{ name: 'Closed', value: 'Closed' },
-					{ name: 'Inactive', value: 'Inactive' },
-				],
-				default: 'Active',
-				description:
-					'Which account status to return. OneBill returns active accounts only when this is not set, without saying so, so a closed account is missing rather than reported. Set it explicitly, or run the operation once per status, to see everything. Only these three values are accepted — Delinquent, Suspended and the other statuses shown in the OneBill interface are rejected.',
 			},
 		],
 	},

@@ -247,7 +247,8 @@ export const orderFields: INodeProperties[] = [
 				name: 'accountNumber',
 				type: 'string',
 				default: '',
-				description: 'Filter orders by subscriber account number',
+				description:
+					'Return only this subscriber\'s orders. This is a shortcut for setting \'Search By\' to accountNumber and \'Search String\' to this value, and it takes precedence if you set those as well.',
 			},
 			{
 				displayName: 'Order By',
@@ -257,11 +258,19 @@ export const orderFields: INodeProperties[] = [
 				description: 'The field to sort results by',
 			},
 			{
+				displayName: 'Search By',
+				name: 'searchBy',
+				type: 'string',
+				default: '',
+				description:
+					'Which field \'Search String\' applies to, for example accountNumber or orderNumber. A search string with no field to search on is ignored, and every order is returned.',
+			},
+			{
 				displayName: 'Search String',
 				name: 'searchString',
 				type: 'string',
 				default: '',
-				description: 'A search string to filter orders',
+				description: 'The value to search for. Requires \'Search By\'.',
 			},
 		],
 	},

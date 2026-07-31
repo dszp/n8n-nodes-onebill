@@ -178,7 +178,8 @@ export const invoiceFields: INodeProperties[] = [
 				name: 'accountNumber',
 				type: 'string',
 				default: '',
-				description: 'Filter invoices by subscriber account number',
+				description:
+					'Return only this subscriber\'s invoices. This is a shortcut for setting \'Search By\' to accountNumber and \'Search String\' to this value, and it takes precedence if you set those as well.',
 			},
 			{
 				displayName: 'Order By',
@@ -188,11 +189,19 @@ export const invoiceFields: INodeProperties[] = [
 				description: 'The field to sort results by',
 			},
 			{
+				displayName: 'Search By',
+				name: 'searchBy',
+				type: 'string',
+				default: '',
+				description:
+					'Which field \'Search String\' applies to, for example accountNumber or invoiceNumber. A search string with no field to search on is ignored, and every invoice is returned.',
+			},
+			{
 				displayName: 'Search String',
 				name: 'searchString',
 				type: 'string',
 				default: '',
-				description: 'A search string to filter invoices',
+				description: 'The value to search for. Requires \'Search By\'.',
 			},
 		],
 	},
