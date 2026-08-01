@@ -1,5 +1,40 @@
 # Changelog
 
+## 0.2.3 (2026-08-01)
+
+Corrects a regression introduced in 0.2.1. Every filter change below is now verified against a
+live tenant rather than inferred from a neighbouring endpoint — the mistake that caused the
+regression.
+
+### Fixed
+
+- **Invoice > Get Many: the Account Number filter is working again.** 0.2.1 changed it to send
+  `searchBy`/`searchString`, on the assumption that the invoice endpoint searched the same way
+  the order endpoint does. It does not: invoices take named parameters directly, and a
+  `searchBy` pair is ignored, so every account's invoices came back. Reverted to the bare
+  parameter, which is what the endpoint honours. Anyone on 0.2.1 or 0.2.2 filtering invoices by
+  account was receiving unfiltered results.
+
+### New Features
+
+- **Invoice > Get Many gained `Invoice Number` and `Status` filters.** Both are honoured by the
+  API and neither was previously available.
+
+### Improvements
+
+- **`Search By` is now a dropdown on Subscriber, Lead and Product**, listing only values
+  confirmed to work: account number, company name and external ID for subscribers and leads;
+  category name for products, where product name and code are rejected outright. Expression
+  mode still accepts any value. Order and Invoice were done in 0.2.2 and 0.2.1 respectively.
+- **`Search By`/`Search String` removed from Invoice > Get Many**, where they had no effect.
+
+### Notes
+
+The six list endpoints do not share one search convention. Subscriber, Lead, Order and Product
+select a field with `searchBy` and match it with `searchString`; Invoice takes named parameters.
+An unrecognised `searchBy` returns no rows on Subscriber, Lead and Product, but is silently
+ignored on Order, which returns everything — so a mistyped search there fails invisibly.
+
 ## 0.2.2 (2026-07-31)
 
 ### Fixed

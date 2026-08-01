@@ -456,9 +456,15 @@ export const subscriberFields: INodeProperties[] = [
 			{
 				displayName: 'Search By',
 				name: 'searchBy',
-				type: 'string',
-				default: '',
-				description: 'The field name to search by',
+				type: 'options',
+				options: [
+					{ name: 'Account Number', value: 'accountNumber' },
+					{ name: 'Company Name', value: 'companyName' },
+					{ name: 'External ID', value: 'externalId' },
+				],
+				default: 'accountNumber',
+				description:
+					'Which field to search on. Switch to an expression to search on a field not listed here. Matching is by prefix and is not case sensitive.',
 			},
 			{
 				displayName: 'Search String',

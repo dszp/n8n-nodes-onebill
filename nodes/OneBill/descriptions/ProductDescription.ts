@@ -271,9 +271,13 @@ export const productFields: INodeProperties[] = [
 			{
 				displayName: 'Search By',
 				name: 'searchBy',
-				type: 'string',
-				default: '',
-				description: 'The field name to search by',
+				type: 'options',
+				options: [
+					{ name: 'Category Name', value: 'categoryName' },
+				],
+				default: 'categoryName',
+				description:
+					'Which field to search on. Switch to an expression to search on a field not listed here. Product name and code are rejected by the API.',
 			},
 			{
 				displayName: 'Search String',

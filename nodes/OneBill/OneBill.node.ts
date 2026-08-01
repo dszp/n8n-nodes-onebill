@@ -969,15 +969,9 @@ async function handleInvoice(
 		const qs: IDataObject = { ...filters };
 		const limit = returnAll ? undefined : (this.getNodeParameter('limit', i) as number);
 
-		// As with orders: a bare `accountNumber` query parameter is ignored and every
-		// account's invoices come back.  The search selects its field with searchBy.
-		if (qs.accountNumber) {
-			qs.searchBy = 'accountNumber';
-			qs.searchString = qs.accountNumber;
-			delete qs.accountNumber;
-		}
-
-		assertSearchable(this.getNode(), qs, i, true);
+		// Verified live: this endpoint takes named parameters (accountNumber, invoiceNumber,
+		// status) directly.  Unlike orders it has no searchBy/searchString pair — passing one
+		// is ignored and every invoice comes back.
 
 		return await oneBillApiRequestAllItems.call(
 			this,
