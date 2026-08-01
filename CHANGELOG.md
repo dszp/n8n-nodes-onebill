@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.2.2 (2026-07-31)
+
+### Fixed
+
+- **A search string with no field to search on now raises an error** instead of quietly
+  returning everything. OneBill's list endpoints choose the field to match with `searchBy`
+  and the value with `searchString`, and ignore a search string that arrives on its own — so
+  the filter read as applied when it was not. Affects Get Many on Subscriber, Lead, Product,
+  Bundle, Order and Invoice. The message names the filter to add.
+
+### Improvements
+
+- **Order > Get Many and Invoice > Get Many: 'Search By' is now a dropdown** rather than a
+  free-text field, offering Account Number and Order Number (Invoice Number for invoices).
+  Expression mode still accepts any value the API takes, so nothing is locked out. Guessing
+  the exact spelling of an API field name was never a reasonable thing to ask.
+
 ## 0.2.1 (2026-07-31)
 
 ### Fixed

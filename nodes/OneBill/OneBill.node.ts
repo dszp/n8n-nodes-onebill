@@ -309,6 +309,33 @@ function stripPasswordsFromContacts(contacts: IDataObject[]): void {
 }
 
 /**
+ * Reject a search string that has no field to search on.
+ *
+ * OneBill's list endpoints choose the field to match with `searchBy` and the value with
+ * `searchString`.  A search string on its own is ignored and the endpoint returns
+ * everything, so the filter reads as applied when it was not.
+ */
+function assertSearchable(
+	node: INode,
+	qs: IDataObject,
+	itemIndex: number,
+	hasAccountShortcut = false,
+): void {
+	if (!qs.searchString || qs.searchBy) {
+		return;
+	}
+
+	const shortcut = hasAccountShortcut
+		? " Or use the 'Account Number' filter to search on an account number."
+		: '';
+
+	throw new NodeOperationError(node, "Filter 'Search String' needs 'Search By' set as well", {
+		itemIndex,
+		description: `Add the 'Search By' filter to choose which field to search on.${shortcut}`,
+	});
+}
+
+/**
  * Build a full-record PUT body from a record that was just read back from the API.
  *
  * OneBill treats a PUT as a whole-record replace: a body carrying only the changed
@@ -572,6 +599,8 @@ async function handleSubscriber(
 		// OneBill accepts one status per search and has no "all" value, so covering several
 		// means a pass each, merged.  With none selected the endpoint applies its own default,
 		// which is active accounts only.
+		assertSearchable(this.getNode(), filters, i);
+
 		const passes: Array<string | undefined> = statuses.length > 0 ? statuses : [undefined];
 		const seen = new Set<string>();
 		const merged: IDataObject[] = [];
@@ -884,6 +913,8 @@ async function handleOrder(
 			delete qs.accountNumber;
 		}
 
+		assertSearchable(this.getNode(), qs, i, true);
+
 		return await oneBillApiRequestAllItems.call(
 			this,
 			'GET',
@@ -945,6 +976,8 @@ async function handleInvoice(
 			qs.searchString = qs.accountNumber;
 			delete qs.accountNumber;
 		}
+
+		assertSearchable(this.getNode(), qs, i, true);
 
 		return await oneBillApiRequestAllItems.call(
 			this,
@@ -1058,6 +1091,8 @@ async function handleProduct(
 		const filters = this.getNodeParameter('filters', i) as IDataObject;
 		const qs: IDataObject = { ...filters };
 		const limit = returnAll ? undefined : (this.getNodeParameter('limit', i) as number);
+		assertSearchable(this.getNode(), qs, i);
+
 		return await oneBillApiRequestAllItems.call(
 			this,
 			'GET',
@@ -1195,6 +1230,8 @@ async function handleLead(
 		const filters = this.getNodeParameter('filters', i) as IDataObject;
 		const qs: IDataObject = { ...filters };
 		const limit = returnAll ? undefined : (this.getNodeParameter('limit', i) as number);
+		assertSearchable(this.getNode(), qs, i);
+
 		return await oneBillApiRequestAllItems.call(
 			this,
 			'GET',
@@ -1291,6 +1328,8 @@ async function handleBundle(
 		const filters = this.getNodeParameter('filters', i) as IDataObject;
 		const qs: IDataObject = { ...filters };
 		const limit = returnAll ? undefined : (this.getNodeParameter('limit', i) as number);
+		assertSearchable(this.getNode(), qs, i);
+
 		return await oneBillApiRequestAllItems.call(
 			this,
 			'GET',

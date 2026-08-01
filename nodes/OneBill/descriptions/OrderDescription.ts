@@ -260,17 +260,21 @@ export const orderFields: INodeProperties[] = [
 			{
 				displayName: 'Search By',
 				name: 'searchBy',
-				type: 'string',
-				default: '',
+				type: 'options',
+				options: [
+					{ name: 'Account Number', value: 'accountNumber' },
+					{ name: 'Order Number', value: 'orderNumber' },
+				],
+				default: 'accountNumber',
 				description:
-					'Which field \'Search String\' applies to, for example accountNumber or orderNumber. A search string with no field to search on is ignored, and every order is returned.',
+					'Which field to search on. Switch to an expression to search on a field not listed here. \'Account Number\' above is a shortcut for this, and takes precedence if you set both.',
 			},
 			{
 				displayName: 'Search String',
 				name: 'searchString',
 				type: 'string',
 				default: '',
-				description: 'The value to search for. Requires \'Search By\'.',
+				description: 'The value to look for in the field chosen above. Add \'Search By\' as well, or this is ignored.',
 			},
 		],
 	},
