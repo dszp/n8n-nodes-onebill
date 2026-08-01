@@ -55,6 +55,7 @@ For **subsequent releases** (previous tag exists):
 
 ```bash
 VERSION=$(node -p "require('./package.json').version")
+git fetch --tags          # gh release create tags on the remote, so the last one may be missing locally
 PREV_TAG=$(git describe --tags --abbrev=0)
 CHANGELOG_ANCHOR=$(scripts/changelog-anchor.sh "${VERSION}")
 
@@ -100,6 +101,7 @@ Single block for a subsequent release after version bump is committed and pushed
 ```bash
 npm ci && npm run build && npm pack
 VERSION=$(node -p "require('./package.json').version")
+git fetch --tags          # gh release create tags on the remote, so the last one may be missing locally
 PREV_TAG=$(git describe --tags --abbrev=0)
 CHANGELOG_ANCHOR=$(scripts/changelog-anchor.sh "${VERSION}")
 gh release create "v${VERSION}" \
