@@ -29,7 +29,12 @@ function parseJsonField(node: INode, value: string, fieldName: string): any {
 	}
 }
 
-import { oneBillApiRequest, oneBillApiRequestAllItems } from './GenericFunctions';
+import {
+	assertNoApiError,
+	isMissingQuoteDocument,
+	oneBillApiRequest,
+	oneBillApiRequestAllItems,
+} from './GenericFunctions';
 
 import { subscriberOperations, subscriberFields } from './descriptions/SubscriberDescription';
 import { orderOperations, orderFields } from './descriptions/OrderDescription';
@@ -41,6 +46,74 @@ import { leadOperations, leadFields } from './descriptions/LeadDescription';
 import { bundleOperations, bundleFields } from './descriptions/BundleDescription';
 import { partnerOperations, partnerFields } from './descriptions/PartnerDescription';
 import { vendorOperations, vendorFields } from './descriptions/VendorDescription';
+
+/**
+ * The state code used to fetch the quote set.
+ *
+ * 1002 and 1034 are interchangeable as filter codes — both return every quote — but the rows
+ * come back carrying one or the other, so a row's own state is not "which filter found it".
+ */
+const QUOTE_STATE_FILTER = '1034';
+
+/**
+ * Marks a handler result that carries binary data, so the execute loop attaches it rather than
+ * flattening the item into JSON.  A plain object cannot express this: the file has to reach the
+ * item's `binary` key, and base64 in a JSON field is technically a result and useless downstream.
+ */
+class BinaryItems {
+	constructor(readonly items: INodeExecutionData[]) {}
+}
+
+/**
+ * OneBill reports a document's `contentType` as a bare format name ("PDF"), not a MIME type.
+ * Every document observed on a live tenant was a PDF, but map defensively.
+ */
+const DOCUMENT_MIME_TYPES: Record<string, string> = {
+	PDF: 'application/pdf',
+	CSV: 'text/csv',
+	DOC: 'application/msword',
+	DOCX: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+	JPEG: 'image/jpeg',
+	JPG: 'image/jpeg',
+	PNG: 'image/png',
+	TXT: 'text/plain',
+	XLS: 'application/vnd.ms-excel',
+	XLSX: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+};
+
+function documentMimeType(document: IDataObject): string {
+	const contentType = (document.contentType as string) || '';
+	return DOCUMENT_MIME_TYPES[contentType.toUpperCase()] ?? 'application/octet-stream';
+}
+
+function documentFileName(document: IDataObject): string {
+	const name = ((document.name as string) || (document.id as string) || 'document').trim();
+	const contentType = (document.contentType as string) || '';
+	// Only add an extension when the stored name has none — these are user-uploaded names.
+	if (name.includes('.') || contentType === '') {
+		return name;
+	}
+	return `${name}.${contentType.toLowerCase()}`;
+}
+
+/**
+ * Decode a base64 document into an n8n binary item.
+ */
+async function toBinaryItem(
+	this: IExecuteFunctions,
+	base64: string,
+	fileName: string,
+	mimeType: string,
+	json: IDataObject,
+	fieldName: string,
+): Promise<INodeExecutionData> {
+	const binaryData = await this.helpers.prepareBinaryData(
+		Buffer.from(base64, 'base64'),
+		fileName,
+		mimeType,
+	);
+	return { json, binary: { [fieldName]: binaryData } };
+}
 
 export class OneBill implements INodeType {
 	description: INodeTypeDescription = {
@@ -248,7 +321,7 @@ export class OneBill implements INodeType {
 
 		for (let i = 0; i < items.length; i++) {
 			try {
-				let responseData: IDataObject | IDataObject[];
+				let responseData: IDataObject | IDataObject[] | BinaryItems;
 
 				if (resource === 'subscriber') {
 					responseData = await handleSubscriber.call(this, operation, i);
@@ -274,11 +347,18 @@ export class OneBill implements INodeType {
 					throw new NodeApiError(this.getNode(), { message: `Unknown resource: ${resource}` } as JsonObject);
 				}
 
-				const executionData = this.helpers.constructExecutionMetaData(
-					this.helpers.returnJsonArray(responseData),
-					{ itemData: { item: i } },
-				);
-				returnData.push(...executionData);
+				if (responseData instanceof BinaryItems) {
+					// Binary items carry a `binary` key that returnJsonArray would discard.
+					for (const item of responseData.items) {
+						returnData.push({ ...item, pairedItem: { item: i } });
+					}
+				} else {
+					const executionData = this.helpers.constructExecutionMetaData(
+						this.helpers.returnJsonArray(responseData),
+						{ itemData: { item: i } },
+					);
+					returnData.push(...executionData);
+				}
 			} catch (error) {
 				if (this.continueOnFail()) {
 					returnData.push({
@@ -548,7 +628,7 @@ async function handleSubscriber(
 	this: IExecuteFunctions,
 	operation: string,
 	i: number,
-): Promise<IDataObject | IDataObject[]> {
+): Promise<IDataObject | IDataObject[] | BinaryItems> {
 	if (operation === 'create') {
 		const body: IDataObject = {
 			accountName: this.getNodeParameter('accountName', i) as string,
@@ -734,6 +814,58 @@ async function handleSubscriber(
 		return (response.subscriptions as IDataObject[]) || [response];
 	}
 
+	if (operation === 'getDocuments') {
+		const accountNumber = this.getNodeParameter('accountNumber', i) as string;
+		const options = this.getNodeParameter('options', i, {}) as IDataObject;
+		const metadataOnly = options.metadataOnly === true;
+
+		const response = await oneBillApiRequest.call(
+			this,
+			'GET',
+			`/rest/SubscriberService/v1/subscribers/${encodeURIComponent(accountNumber)}/documents`,
+		);
+
+		const documents = Array.isArray(response.documents)
+			? (response.documents as IDataObject[])
+			: [];
+
+		// These are manually uploaded attachments — signed contracts and the like. Nothing
+		// generated lives here, not even invoices, so this is not where rendered quotes are.
+		if (metadataOnly) {
+			return documents.map((document) => {
+				const metadata: IDataObject = { ...document, accountNumber };
+				delete metadata.content;
+				return metadata;
+			});
+		}
+
+		const fieldName = this.getNodeParameter('binaryPropertyName', i) as string;
+		const items: INodeExecutionData[] = [];
+
+		for (const document of documents) {
+			const { content, ...metadata } = document;
+			const json: IDataObject = { ...metadata, accountNumber };
+
+			if (typeof content !== 'string' || content === '') {
+				items.push({ json: { ...json, hasContent: false } });
+				continue;
+			}
+
+			items.push(
+				await toBinaryItem.call(
+					this,
+					content,
+					documentFileName(document),
+					documentMimeType(document),
+					json,
+					fieldName,
+				),
+			);
+		}
+
+		return new BinaryItems(items);
+	}
+
 	if (operation === 'getContacts') {
 		const accountNumber = this.getNodeParameter('accountNumber', i) as string;
 		const response = await oneBillApiRequest.call(
@@ -869,7 +1001,7 @@ async function handleOrder(
 	this: IExecuteFunctions,
 	operation: string,
 	i: number,
-): Promise<IDataObject | IDataObject[]> {
+): Promise<IDataObject | IDataObject[] | BinaryItems> {
 	if (operation === 'create' || operation === 'validate') {
 		const body: IDataObject = {
 			accountNumber: this.getNodeParameter('accountNumber', i) as string,
@@ -901,8 +1033,26 @@ async function handleOrder(
 	if (operation === 'getAll') {
 		const returnAll = this.getNodeParameter('returnAll', i) as boolean;
 		const filters = this.getNodeParameter('filters', i) as IDataObject;
+		const includeQuotes = this.getNodeParameter('includeQuotes', i, false) as boolean;
 		const qs: IDataObject = { ...filters };
 		const limit = returnAll ? undefined : (this.getNodeParameter('limit', i) as number);
+
+		const state = qs.state as string | undefined;
+		delete qs.state;
+
+		// Only one search pair is honoured per request, so the two shortcuts cannot both apply.
+		// Silently dropping one would return a plausible list filtered by the wrong thing.
+		if (qs.accountNumber && state) {
+			throw new NodeOperationError(
+				this.getNode(),
+				"Filters 'Account Number' and 'State' cannot be combined",
+				{
+					itemIndex: i,
+					description:
+						'The orders search matches one field per request. Filter on one of them and narrow the results afterwards.',
+				},
+			);
+		}
 
 		// The orders search selects a field with searchBy and matches it with searchString,
 		// the same shape the subscriber search uses.  A bare `accountNumber` query parameter
@@ -911,9 +1061,65 @@ async function handleOrder(
 			qs.searchBy = 'accountNumber';
 			qs.searchString = qs.accountNumber;
 			delete qs.accountNumber;
+		} else if (state) {
+			qs.searchBy = 'state';
+			qs.searchString = state;
 		}
 
 		assertSearchable(this.getNode(), qs, i, true);
+
+		// With no state filter the endpoint returns every order EXCEPT quotes, and reports a
+		// totalCount for that narrowed set — so nothing in the response reveals the omission.
+		// A tenant's full order history is the default set plus the quote set, which means a
+		// second pass.  It cannot be combined with another search: the quote pass has to spend
+		// the one available search pair on `state`, so an account filter would be lost.
+		if (includeQuotes) {
+			if (qs.searchBy || qs.searchString) {
+				throw new NodeOperationError(
+					this.getNode(),
+					"'Include Quotes' cannot be combined with another filter",
+					{
+						itemIndex: i,
+						description:
+							"Quotes are fetched by searching on state, and the orders search matches one field per request. Turn off 'Include Quotes', or filter the merged results afterwards.",
+					},
+				);
+			}
+
+			const seen = new Set<string>();
+			const merged: IDataObject[] = [];
+
+			for (const pass of [{}, { searchBy: 'state', searchString: QUOTE_STATE_FILTER }]) {
+				const page = await oneBillApiRequestAllItems.call(
+					this,
+					'GET',
+					'/rest/OrderService/v1/orders',
+					{},
+					{ ...qs, ...pass },
+					'order',
+					limit,
+				);
+
+				// The two passes are disjoint on a healthy tenant, but merge defensively — a
+				// duplicate would otherwise be reported twice with no indication.
+				for (const order of page) {
+					const orderNumber = order.orderNumber as string | undefined;
+					if (orderNumber !== undefined) {
+						if (seen.has(orderNumber)) {
+							continue;
+						}
+						seen.add(orderNumber);
+					}
+					merged.push(order);
+				}
+
+				if (limit && merged.length >= limit) {
+					break;
+				}
+			}
+
+			return limit ? merged.slice(0, limit) : merged;
+		}
 
 		return await oneBillApiRequestAllItems.call(
 			this,
@@ -924,6 +1130,71 @@ async function handleOrder(
 			'order',
 			limit,
 		);
+	}
+
+	if (operation === 'getQuoteDocument') {
+		const orderNumber = this.getNodeParameter('orderNumber', i) as string;
+		const fieldName = this.getNodeParameter('binaryPropertyName', i) as string;
+		const options = this.getNodeParameter('options', i, {}) as IDataObject;
+
+		const qs: IDataObject = {};
+		// `version` is the only parameter this endpoint reads.  quoteVersion, docVersion,
+		// revision and quoteDocName are each accepted and silently ignored, returning the
+		// CURRENT document — a wrong-named parameter hands over the wrong file and looks fine.
+		if (options.version) {
+			qs.version = options.version;
+		}
+
+		const response = await oneBillApiRequest.call(
+			this,
+			'GET',
+			`/rest/OrderService/v1/orders/${encodeURIComponent(orderNumber)}/quoteDocument`,
+			{},
+			qs,
+			true,
+		);
+
+		if (isMissingQuoteDocument(response)) {
+			if (options.ignoreIfMissing) {
+				return { orderNumber, hasQuoteDocument: false };
+			}
+			throw new NodeOperationError(
+				this.getNode(),
+				`Order '${orderNumber}' has no quote document`,
+				{
+					itemIndex: i,
+					description:
+						"Most orders never had a quote, so this is a normal outcome. Turn on 'Ignore If Missing' to return a flag instead, or check the order number.",
+				},
+			);
+		}
+
+		// Anything else that came back in-band is a genuine rejection.
+		assertNoApiError.call(this, response);
+
+		const quotePdf = response.quotePdf as string | undefined;
+		if (!quotePdf) {
+			throw new NodeApiError(this.getNode(), response as unknown as JsonObject, {
+				message: `Order '${orderNumber}' returned no quote document content`,
+				description: 'The request succeeded but carried no document. Check the order number.',
+			});
+		}
+
+		const quoteDocName = (response.quoteDocName as string) || orderNumber;
+		const item = await toBinaryItem.call(
+			this,
+			quotePdf,
+			`${quoteDocName}.pdf`,
+			'application/pdf',
+			{
+				orderNumber,
+				quoteDocName,
+				hasQuoteDocument: true,
+				...(options.version ? { version: options.version } : {}),
+			},
+			fieldName,
+		);
+		return new BinaryItems([item]);
 	}
 
 	if (operation === 'activate') {

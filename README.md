@@ -16,16 +16,33 @@ Follow the [installation guide](https://docs.n8n.io/integrations/community-nodes
 
 ## Operations
 
+> **Quotes and orders are the same object.** A quote is an order in a quote state, so both are
+> read through the Order resource. `Get Many` returns every order **except** quotes and reports a
+> total for that narrowed set, so the omission is invisible — turn on **Include Quotes** for the
+> full history, or pick a quote state in the **State** filter. The search matches one field per
+> request, so Include Quotes cannot be combined with another filter.
+
+> **Reading an order reports its state differently from listing one.** In a list the field is
+> `state` (a number) and the status keeps its spaces; a single read renames it to `orderState`
+> (a string), removes the spaces (`Pending Billing` becomes `PendingBilling`), and reports an
+> expired quote as `1007` rather than `1034`. An expression comparing a status literal works
+> while iterating a list and stops working after a Get. Treat `1002`, `1007` and `1034` as
+> "is a quote".
+
+> **`netAmount` includes tax** — the opposite of the usual convention. Use `subtotal` for the
+> pre-tax figure. `currency` is a symbol (`$`), not an ISO code.
+
+
 ### Subscriber
 - Create, Get, Get Many, Update, Close, Suspend, Resume, Reopen
-- Get Balance, Get Subscriptions
+- Get Balance, Get Subscriptions, Get Documents
 - Get Contacts, Add Contact, Update Contact, Remove Contact
 
 ### Lead
 - Create, Get, Get Many, Update, Convert to Subscriber
 
 ### Order
-- Create, Get, Get Many, Validate, Activate, Update Quote
+- Create, Get, Get Many, Validate, Activate, Update Quote, Get Quote Document
 
 ### Invoice
 - Get, Get Many, Modify
@@ -63,15 +80,15 @@ To use this node, you need the following credentials from your OneBill account:
 
 ## API Coverage
 
-The OneBill API has approximately 135 endpoints across 13 services. This node currently implements 54 operations across 10 resources (~40% coverage), focusing on the most common billing and subscription management tasks.
+The OneBill API has approximately 135 endpoints across 13 services. This node currently implements 56 operations across 10 resources (~41% coverage), focusing on the most common billing and subscription management tasks.
 
 ### Implemented Endpoints
 
 | Resource | Service | Operations |
 |----------|---------|------------|
-| **Subscriber** | SubscriberService | Create, Get, Get Many, Update, Close, Suspend, Resume, Reopen, Get Balance, Get Subscriptions, Get Contacts, Add Contact, Update Contact, Remove Contact |
+| **Subscriber** | SubscriberService | Create, Get, Get Many, Update, Close, Suspend, Resume, Reopen, Get Balance, Get Subscriptions, Get Documents, Get Contacts, Add Contact, Update Contact, Remove Contact |
 | **Lead** | SubscriberService | Create, Get, Get Many, Update, Convert to Subscriber |
-| **Order** | OrderService | Create, Get, Get Many, Validate, Activate, Update Quote |
+| **Order** | OrderService | Create, Get, Get Many, Validate, Activate, Update Quote, Get Quote Document |
 | **Invoice** | InvoiceService | Get, Get Many, Modify |
 | **Payment** | PaymentService | Create, Get Many, Get for Subscriber |
 | **Product** | ProductService | Create, Get, Get Many, Update, Delete |

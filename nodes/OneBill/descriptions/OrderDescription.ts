@@ -37,6 +37,12 @@ export const orderOperations: INodeProperties[] = [
 				action: 'Get many orders',
 			},
 			{
+				name: 'Get Quote Document',
+				value: 'getQuoteDocument',
+				description: 'Download the rendered quote PDF for an order',
+				action: 'Get quote document for order',
+			},
+			{
 				name: 'Update Quote',
 				value: 'updateQuote',
 				description: 'Update a quote order',
@@ -173,7 +179,7 @@ export const orderFields: INodeProperties[] = [
 		displayOptions: {
 			show: {
 				resource: ['order'],
-				operation: ['get', 'activate', 'updateQuote'],
+				operation: ['get', 'activate', 'updateQuote', 'getQuoteDocument'],
 			},
 		},
 	},
@@ -199,6 +205,33 @@ export const orderFields: INodeProperties[] = [
 	// ----------------------------------
 	//         order: getAll
 	// ----------------------------------
+	{
+		displayName:
+			'This search returns every order EXCEPT quotes, and the reported total counts only what it returned — nothing in the response shows the omission. Turn on \'Include Quotes\' for the full history, or filter on a quote state.',
+		name: 'orderGetAllQuoteNotice',
+		type: 'notice',
+		default: '',
+		displayOptions: {
+			show: {
+				resource: ['order'],
+				operation: ['getAll'],
+			},
+		},
+	},
+	{
+		displayName: 'Include Quotes',
+		name: 'includeQuotes',
+		type: 'boolean',
+		default: false,
+		displayOptions: {
+			show: {
+				resource: ['order'],
+				operation: ['getAll'],
+			},
+		},
+		description:
+			'Whether to also return quotes, which this search otherwise omits. Runs a second search and merges the results on order number. Cannot be combined with the other filters, because the search matches one field per request. Defaults to false.',
+	},
 	{
 		displayName: 'Return All',
 		name: 'returnAll',
@@ -275,6 +308,74 @@ export const orderFields: INodeProperties[] = [
 				type: 'string',
 				default: '',
 				description: 'The value to look for in the field chosen above. Add \'Search By\' as well, or this is ignored.',
+			},
+			{
+				displayName: 'State',
+				name: 'state',
+				type: 'options',
+				options: [
+					{ name: 'Billing Active', value: '1006' },
+					{ name: 'Cancelled', value: '1030' },
+					{ name: 'Partially Fulfilled', value: '1016' },
+					{ name: 'Pending Billing', value: '1005' },
+					{ name: 'Quote', value: '1034' },
+					{ name: 'Quote Expired', value: '1002' },
+				],
+				default: '1034',
+				description:
+					'Return only orders in this state. This is a shortcut for setting \'Search By\' to state, and cannot be combined with \'Account Number\'. A single read of an order reports its state differently: the name loses its spaces, and an expired quote reports 1007 rather than 1034.',
+			},
+		],
+	},
+
+	// ----------------------------------
+	//         order: getQuoteDocument
+	// ----------------------------------
+	{
+		displayName: 'Output Data Field Name',
+		name: 'binaryPropertyName',
+		type: 'string',
+		required: true,
+		default: 'data',
+		displayOptions: {
+			show: {
+				resource: ['order'],
+				operation: ['getQuoteDocument'],
+			},
+		},
+		description: 'The name of the output field to put the PDF file in',
+	},
+	{
+		displayName: 'Options',
+		name: 'options',
+		type: 'collection',
+		placeholder: 'Add Option',
+		default: {},
+		displayOptions: {
+			show: {
+				resource: ['order'],
+				operation: ['getQuoteDocument'],
+			},
+		},
+		options: [
+			{
+				displayName: 'Ignore If Missing',
+				name: 'ignoreIfMissing',
+				type: 'boolean',
+				default: false,
+				description:
+					'Whether to return a flag instead of stopping when an order has no quote document. Most orders never had a quote, so absence is common. Defaults to false.',
+			},
+			{
+				displayName: 'Version',
+				name: 'version',
+				type: 'number',
+				default: 0,
+				typeOptions: {
+					minValue: 0,
+				},
+				description:
+					'Which revision of the document to retrieve. Leave at 0 for the current one. Revisions are numbered from 1, and only the newest can be ordered against.',
 			},
 		],
 	},

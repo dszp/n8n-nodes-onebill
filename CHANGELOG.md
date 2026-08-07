@@ -1,5 +1,44 @@
 # Changelog
 
+## Unreleased
+
+Orders, quotes and documents. Everything below was verified against a live tenant; OneBill's
+published OpenAPI declares `application/json` for all 152 of its responses, never mentions PDFs,
+and carries the quote operations as empty stubs.
+
+### New Features
+
+- **Order > Get Quote Document** downloads the rendered quote PDF as a binary output item, the
+  same document the OneBill interface produces, including its acceptance and signature section.
+  The endpoint is entirely undocumented. An optional **Version** retrieves a superseded revision —
+  a full audit trail of what a customer was shown at each revision — and **Ignore If Missing**
+  turns the common "this order never had a quote" case into a flag instead of stopping the run.
+- **Order > Get Many gained a State filter and an Include Quotes toggle.** OneBill returns every
+  order *except* quotes and reports a total for that narrowed set, so a tenant's quotes were
+  simply missing with nothing in the response to show it. Include Quotes issues the second search
+  and merges on order number.
+- **Subscriber > Get Documents** returns the files uploaded against an account — signed contracts
+  and similar — one binary item per document, with a **Metadata Only** option since the files are
+  sent inline and make the response large. Nothing generated lives here, not even invoices.
+
+### Fixed
+
+- **A missing quote document is no longer reported as an authentication failure.** OneBill returns
+  `USER_AUTHENTICATION_FAILED` at HTTP 200 for an order that simply has no document, with a valid
+  token whose next request succeeds. Reacting by refreshing the token was measured firing on ~85%
+  of orders and minting a token per miss; the node keys on error code `11ORDWS0049` instead and
+  treats absence as an ordinary outcome.
+
+### Notes
+
+Only `version` selects a quote document revision. `quoteVersion`, `docVersion`, `revision` and
+`quoteDocName` are each accepted and **silently ignored, returning the current document** — so a
+wrong parameter name hands over the wrong file and looks successful. The node sends `version`.
+
+Of the order-list filter parameters, only `searchBy`/`searchString` does anything. `orderType`,
+`orderStatus`, `status`, `state`, `orderState`, `orderCategory`, `includeQuote(s)`, `isQuote`,
+`quote` and `showQuote` are all accepted and ignored, returning the full unfiltered set.
+
 ## 0.2.3 (2026-08-01)
 
 Corrects a regression introduced in 0.2.1. Every filter change below is now verified against a

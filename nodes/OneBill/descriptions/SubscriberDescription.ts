@@ -49,6 +49,12 @@ export const subscriberOperations: INodeProperties[] = [
 				action: 'Get subscriber contacts',
 			},
 			{
+				name: 'Get Documents',
+				value: 'getDocuments',
+				description: 'Retrieve the files uploaded against a subscriber',
+				action: 'Get subscriber documents',
+			},
+			{
 				name: 'Get Many',
 				value: 'getAll',
 				description: 'Retrieve a list of subscribers',
@@ -361,7 +367,7 @@ export const subscriberFields: INodeProperties[] = [
 		displayOptions: {
 			show: {
 				resource: ['subscriber'],
-				operation: ['get', 'update', 'close', 'suspend', 'resume', 'reopen', 'getBalance', 'getSubscriptions', 'getContacts', 'addContact', 'updateContact', 'removeContact'],
+				operation: ['get', 'update', 'close', 'suspend', 'resume', 'reopen', 'getBalance', 'getSubscriptions', 'getContacts', 'getDocuments', 'addContact', 'updateContact', 'removeContact'],
 			},
 		},
 		description: 'The account number of the subscriber',
@@ -921,6 +927,48 @@ export const subscriberFields: INodeProperties[] = [
 				default: '',
 				placeholder: 'e.g. nathan@example.com',
 				description: 'The login username for this contact (typically an email address)',
+			},
+		],
+	},
+
+	// ----------------------------------
+	//         subscriber: getDocuments
+	// ----------------------------------
+	{
+		displayName: 'Output Data Field Name',
+		name: 'binaryPropertyName',
+		type: 'string',
+		required: true,
+		default: 'data',
+		displayOptions: {
+			show: {
+				resource: ['subscriber'],
+				operation: ['getDocuments'],
+			},
+		},
+		description:
+			'The name of the output field to put each file in. Not used when \'Metadata Only\' is on.',
+	},
+	{
+		displayName: 'Options',
+		name: 'options',
+		type: 'collection',
+		placeholder: 'Add Option',
+		default: {},
+		displayOptions: {
+			show: {
+				resource: ['subscriber'],
+				operation: ['getDocuments'],
+			},
+		},
+		options: [
+			{
+				displayName: 'Metadata Only',
+				name: 'metadataOnly',
+				type: 'boolean',
+				default: false,
+				description:
+					'Whether to return only the document details and leave out the files themselves, which are sent inline and make the response large. Defaults to false.',
 			},
 		],
 	},

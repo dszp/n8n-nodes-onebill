@@ -97,10 +97,31 @@ export async function getAccessToken(
 }
 
 /**
+ * OneBill's error code for "this order has no quote document".
+ *
+ * The response is a lie: it reports USER_AUTHENTICATION_FAILED at HTTP 200 with a perfectly
+ * valid token whose very next request succeeds.  Reacting by refreshing the token was measured
+ * firing on ~85% of orders and minting a token per miss — key on the code instead.  Most orders
+ * genuinely have no document, so absence is an ordinary outcome, not a failure.
+ */
+export const NO_QUOTE_DOCUMENT_CODE = '11ORDWS0049';
+
+/**
+ * Whether a response is OneBill reporting an absent quote document rather than a real failure.
+ */
+export function isMissingQuoteDocument(response: IDataObject): boolean {
+	if (response.errorCode === NO_QUOTE_DOCUMENT_CODE) {
+		return true;
+	}
+	const errorMessage = response.errorMessage;
+	return typeof errorMessage === 'string' && /quote document/i.test(errorMessage);
+}
+
+/**
  * Check an API response for application-level errors (HTTP 200 with error body).
  * OneBill returns { status: "Bad Request", validationResponse: { ... } } on validation failures.
  */
-function checkForApiError(
+export function assertNoApiError(
 	this: IExecuteFunctions | ILoadOptionsFunctions | IHookFunctions | IWebhookFunctions,
 	response: IDataObject,
 ): void {
@@ -117,6 +138,11 @@ function checkForApiError(
 
 /**
  * Make an authenticated API request to OneBill.
+ *
+ * Set `skipErrorCheck` when the caller needs to inspect an in-band error rather than have it
+ * raised — the quote-document read reports an ordinary "no document" outcome that way, and it
+ * is indistinguishable from a real failure until the error code is examined.  Callers that
+ * pass it are responsible for calling `assertNoApiError` on anything they do not handle.
  */
 export async function oneBillApiRequest(
 	this: IExecuteFunctions | ILoadOptionsFunctions | IHookFunctions | IWebhookFunctions,
@@ -124,6 +150,7 @@ export async function oneBillApiRequest(
 	endpoint: string,
 	body: IDataObject = {},
 	qs: IDataObject = {},
+	skipErrorCheck = false,
 ): Promise<IDataObject> {
 	const credentials = await this.getCredentials('oneBillApi');
 	const baseUrl = validateBaseUrl(this, credentials.baseUrl as string);
@@ -150,7 +177,9 @@ export async function oneBillApiRequest(
 
 	try {
 		const response = (await this.helpers.httpRequest(options)) as IDataObject;
-		checkForApiError.call(this, response);
+		if (!skipErrorCheck) {
+			assertNoApiError.call(this, response);
+		}
 		return response;
 	} catch (error) {
 		// On 401, clear cache and retry once
@@ -166,7 +195,9 @@ export async function oneBillApiRequest(
 
 			try {
 				const retryResponse = (await this.helpers.httpRequest(options)) as IDataObject;
-				checkForApiError.call(this, retryResponse);
+				if (!skipErrorCheck) {
+					assertNoApiError.call(this, retryResponse);
+				}
 				return retryResponse;
 			} catch (retryError) {
 				if (retryError instanceof NodeApiError) {
