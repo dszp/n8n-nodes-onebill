@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 (2026-08-07)
 
 Orders, quotes and documents. Everything below was verified against a live tenant; OneBill's
 published OpenAPI declares `application/json` for all 152 of its responses, never mentions PDFs,
